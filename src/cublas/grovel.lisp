@@ -20,6 +20,8 @@
 (ctype cublas-math           "cublasMath_t")
 (ctype cublas-compute-type   "cublasComputeType_t")
 
+(ctype cublas-log-callback   "cublasLogCallback")
+
 (ctype cuda-data-type "cudaDataType_t")
 (ctype library-property-type "libraryPropertyType_t")
 
