@@ -43,12 +43,6 @@
 (defun/cublas_v2 ("cublasDestroy" destroy)
   (handle handle))
 
-(defmacro with-handle (var &body body)
-  `(with-foreign-object (,var 'handle)
-     (create ,var)
-     (unwind-protect (multiple-value-prog1 (progn ,@body))
-       (destroy (mem-ref ,var 'handle)))))
-
 (defun/cublas_v2 ("cublasGetVersion" get-version)
   (handle handle)
   (*version :pointer))
@@ -764,7 +758,7 @@
   (*c :pointer)
   (ldc :int))
 
-(defun/cublas_v2* ("cublas?herk2k" ?herk2k :complex-only? t)
+(defun/cublas_v2* ("cublas?her2k" ?her2k :complex-only? t)
   (handle handle)
   (uplo fill-mode)
   (trans operation)

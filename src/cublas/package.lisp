@@ -1,4 +1,5 @@
 (defpackage cl-tensor.cublas
+  (:nicknames :clts.cublas)
   (:use :common-lisp :cffi)
   (:export
     ;; grovel types
@@ -127,7 +128,4 @@
     #:dot*
     #:dotc*
     #:rot*
-    #:scal*
-
-    ;; cuBLAS utility
-    #:with-handle))
+    #:scal*))
