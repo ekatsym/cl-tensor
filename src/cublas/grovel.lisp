@@ -8,7 +8,7 @@
 
 (constant (+version+ "CUBLAS_VERSION"))
 
-(ctype handle         "cublasHandle_t")
+(ctype handle "cublasHandle_t")
 
 (cenum status
   ((:cublas-status-success          "CUBLAS_STATUS_SUCCESS"))
@@ -82,7 +82,7 @@
   ((:cublas-compute-32i           "CUBLAS_COMPUTE_32I"))
   ((:cublas-compute-32i-pedantic  "CUBLAS_COMPUTE_32I_PEDANTIC")))
 
-(ctype log-callback   "cublasLogCallback")
+(ctype log-callback "cublasLogCallback")
 
 (cenum cuda-data-type
   ((:cuda-r-16f  "CUDA_R_16F"))
