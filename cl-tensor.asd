@@ -13,7 +13,8 @@
                   :components
                   ((:file "package")
                    (:cffi-grovel-file "grovel")
-                   (:file "library"))))))
+                   (:file "library")
+                   (:file "util"))))))
   :description ""
   :in-order-to ((test-op (test-op "cl-tensor/tests"))))
 

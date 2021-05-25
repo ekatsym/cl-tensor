@@ -128,4 +128,12 @@
     #:dot*
     #:dotc*
     #:rot*
-    #:scal*))
+    #:scal*
+
+    ;; util
+    #:cublas-error
+    #:cublas-status-error
+    #:check-status
+    #:create-handle
+    #:with-handle
+    #:with-handles))
