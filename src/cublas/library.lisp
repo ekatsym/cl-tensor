@@ -23,7 +23,7 @@
 (defcufun ("cudaFree" cuda-free)
   (=>x/d :pointer))
 
-(defcufun ("cudaMemCpy" cuda-memcpy)
+(defcufun ("cudaMemcpy" cuda-memcpy)
   (=>dst :pointer)
   (=>src :pointer)
   (count :size)
@@ -544,6 +544,7 @@
   (transb operation)
   (m :int)
   (n :int)
+  (k :int)
   (=>alpha :pointer)
   (=>a :pointer)
   (lda :int)

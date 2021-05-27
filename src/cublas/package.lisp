@@ -2,7 +2,10 @@
   (:nicknames :clt.cublas)
   (:use :common-lisp :cffi)
   (:export
-    ;; grovel types
+    ;; grovel types and constants
+    #:cuda-error
+    #:cuda-stream
+    #:cuda-memcpy-kind
     #:+version+
     #:cu-complex
     #:cu-double-complex
@@ -18,10 +21,28 @@
     #:math
     #:compute-type
     #:log-callback
-    #:cuda-stream
 
-    ;; library
-    #:libcublas
+    ;; util
+    #:cuda-error
+    #:check-cuda-error
+    #:create-device-pointer
+    #:call-with-device-pointer
+    #:with-device-pointer
+    #:call-with-device-pointers
+    #:with-device-pointers
+    #:cublas-error
+    #:cublas-status-error
+    #:check-status
+    #:create-handle
+    #:call-with-handle
+    #:with-handle
+    #:call-with-handles
+    #:with-handles
+
+    ;; CUDA functions
+    #:cuda-malloc
+    #:cuda-free
+    #:cuda-memcpy
 
     ;; cuBLAS helper functions
     #:create
@@ -128,12 +149,4 @@
     #:dot*
     #:dotc*
     #:rot*
-    #:scal*
-
-    ;; util
-    #:cublas-error
-    #:cublas-status-error
-    #:check-status
-    #:create-handle
-    #:with-handle
-    #:with-handles))
+    #:scal*))
