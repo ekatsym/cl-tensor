@@ -21,19 +21,19 @@
        (defcfun (,cname ,%lisp-name) cuda-error
          ,@args))))
 
-(defun create-device-pointer (type count)
+(defun make-device-pointer (type count)
   (with-foreign-object (=>=>x/d :pointer)
     (check-cuda-error
       (cuda-malloc =>=>x/d (* (foreign-type-size type) count)))
     (mem-ref =>=>x/d :pointer)))
 
 (defun call-with-device-pointer (type count function)
-  (let ((=>x/d (create-device-pointer type count)))
+  (let ((=>x/d (make-device-pointer type count)))
     (unwind-protect (funcall function =>x/d)
       (cuda-free =>x/d))))
 
 (defmacro with-device-pointer ((var type count) &body body)
-  `(let ((,var (create-device-pointer ,type ,count)))
+  `(let ((,var (make-device-pointer ,type ,count)))
      (unwind-protect
        (multiple-value-prog1 ,@body)
        (cuda-free ,var))))
@@ -41,14 +41,14 @@
 (defun call-with-device-pointers (type-count-s function)
   (let ((=>xs/d (mapcar (lambda (type-count)
                           (destructuring-bind (type count) type-count
-                            (create-device-pointer type count))) type-count-s)))
+                            (make-device-pointer type count))) type-count-s)))
     (unwind-protect (apply function =>xs/d)
       (mapc #'cuda-free =>xs/d))))
 
 (defmacro with-device-pointers ((&rest var-type-count-s) &body body)
   `(let (,@(mapcar (lambda (var-type-count)
                      (destructuring-bind (var type count) var-type-count
-                       `(,var (create-device-pointer ,type ,count))))
+                       `(,var (make-device-pointer ,type ,count))))
                    var-type-count-s))
      (unwind-protect
        (multiple-value-prog1 ,@body)

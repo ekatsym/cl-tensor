@@ -1,5 +1,5 @@
 (defpackage cl-tensor.cublas
-  (:nicknames :clt.cublas)
+  (:nicknames :clt.cublas :clt.cb)
   (:use :common-lisp :cffi)
   (:export
     ;; grovel types and constants
@@ -25,7 +25,7 @@
     ;; util
     #:cuda-error
     #:check-cuda-error
-    #:create-device-pointer
+    #:make-device-pointer
     #:call-with-device-pointer
     #:with-device-pointer
     #:call-with-device-pointers
