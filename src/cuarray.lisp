@@ -1,11 +1,16 @@
 (defpackage cl-tensor.cuarray
   (:nicknames :clt.cuarray :clt.ca)
-  (:use :common-lisp)
+  (:use :common-lisp cl-tensor.util)
   (:export
     ;; Core
-    #:blas-array
     #:*handle*
     #:*datatype*
+    #:with-handle
+    #:cuarray
+    #:make-cuarray
+    #:make-zeros-cuarray
+    #:array->cuarray
+    #:cuarray->array
 
     ;; BLAS level-1
     #:axpy
@@ -44,11 +49,64 @@
   ((dimensions :initarg :dimensions :reader cuarray-dimensions)
    (datum :initarg :datum :reader cuarray-datum)))
 
+(defmethod print-object ((object cuarray) stream)
+  (format stream "#<CUARRAY :DIMENSIONS ~A :DATUM ~S>"
+          (cuarray-dimensions object)
+          (cuarray->array object)))
+
 (defun make-cuarray (&rest dimensions)
   (make-instance 'cuarray
                  :dimensions dimensions
                  :datum      (clt.cublas:make-device-pointer
                                *datatype* (reduce #'* dimensions))))
+
+
+(defun array->cuarray (array)
+  (let* ((dims (array-dimensions array))
+         (cuarr (apply #'make-cuarray (array-dimensions array)))
+         (datum (cuarray-datum cuarr))
+         (count (reduce #'* dims)))
+    (cffi:with-foreign-object (carr *datatype* count)
+      (dolist (index (indices dims))
+        (let ((row-major-index (index->row-major-index index dims))
+              (col-major-index (index->col-major-index index dims)))
+          (setf (cffi:mem-aref carr *datatype* col-major-index)
+                (coerce (row-major-aref array row-major-index)
+                        (ecase *datatype*
+                          (:float 'single-float)
+                          (:double 'double-float))))))
+      (clt.cublas:cuda-memcpy datum
+                              carr
+                              (* (cffi:foreign-type-size *datatype*) count)
+                              :cuda-memcpy-default)
+      (clt.cublas:cuda-device-synchronize)
+      cuarr)))
+
+(defun cuarray (x)
+  (etypecase x
+    (array (array->cuarray x))
+    (number (array->cuarray (make-array '() :initial-element x)))))
+
+(defun cuarray->array (cuarray)
+  (let* ((datum (cuarray-datum cuarray))
+         (dims (cuarray-dimensions cuarray))
+         (arr (make-array dims))
+         (count (reduce #'* dims)))
+    (cffi:with-foreign-object (carr *datatype* count)
+      (clt.cublas:cuda-memcpy carr
+                              datum
+                              (* (cffi:foreign-type-size *datatype*) count)
+                              :cuda-memcpy-default)
+      (clt.cublas:cuda-device-synchronize)
+      (dotimes (i count)
+        (setf (row-major-aref arr i)
+              (cffi:mem-aref carr *datatype* i)))
+      (dolist (index (indices dims))
+        (let ((row-major-index (index->row-major-index index dims))
+              (col-major-index (index->col-major-index index dims)))
+          (setf (row-major-aref arr row-major-index)
+                (cffi:mem-aref carr *datatype* col-major-index))))
+      arr)))
 
 (defun make-zeros-cuarray (&rest dimensions)
   (let ((cuarr (apply #'make-cuarray dimensions))
@@ -62,7 +120,7 @@
       (clt.cublas:cuda-memcpy (cuarray-datum cuarr)
                               =>x
                               count
-                              :cuda-memcpy-host-to-device)
+                              :cuda-memcpy-default)
       cuarr)))
 
 (define-condition cuarray-axis-unmatched-error (error)
