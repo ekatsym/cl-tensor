@@ -16,6 +16,7 @@
                    (:file "util")
                    (:file "library")))
                  (:file "util")
+                 (:file "cuarray")
                  )))
   :description ""
   :in-order-to ((test-op (test-op "cl-tensor/tests"))))

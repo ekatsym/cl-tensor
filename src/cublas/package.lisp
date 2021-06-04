@@ -43,6 +43,7 @@
     #:cuda-malloc
     #:cuda-free
     #:cuda-memcpy
+    #:cuda-device-synchronize
 
     ;; cuBLAS helper functions
     #:create

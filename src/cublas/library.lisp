@@ -29,6 +29,8 @@
   (count :size)
   (kind cuda-memcpy-kind))
 
+(defcufun ("cudaDeviceSynchronize" cuda-device-synchronize))
+
 
 ;;;;; cuBLAS
 ;;; Define cuBLAS helper functions

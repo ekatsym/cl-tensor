@@ -81,22 +81,24 @@
 (defun call-with-handle (function)
   (let ((handle (create-handle)))
     (unwind-protect (funcall function handle)
+      (cuda-device-synchronize)
       (destroy handle))))
 
 (defmacro with-handle (var &body body)
   `(let ((,var (create-handle)))
      (unwind-protect (multiple-value-prog1 (progn ,@body))
+       (cuda-device-synchronize)
        (check-status (destroy ,var)))))
 
 (defun call-with-handles (n function)
-  (let ((handles (loop :repeat n :collect (create-handle))))
-    (unwind-protect (apply function handles)
-      (mapc #'destroy handles))))
+  (if (zerop n)
+      function
+      (let ((handle (create-handle)))
+        (call-with-handles (1- n) (funcall function handle)))))
 
 (defmacro with-handles (vars &body body)
-  `(let (,@(mapcar (lambda (var) `(,var (create-handle))) vars))
-     (unwind-protect (multiple-value-prog1 (progn ,@body))
-       ,@(mapcar (lambda (var) `(check-status (destroy ,var))) vars))))
+  `(with-handle ,(first vars)
+     (with-handles ,(rest vars) ,@body)))
 
 ;;; macros for definition
 (defmacro defcublasfun_v2 ((cname lisp-name) &body args)
