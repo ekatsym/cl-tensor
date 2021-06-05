@@ -28,6 +28,7 @@
     #:asum
     #:axpy
     #:copy
+    #:copy*
     #:dot
     #:nrm2
     #:scal
@@ -65,6 +66,9 @@
 
 ;;; Constructors
 (defun make-cuarray (dimensions &key displaced-to)
+  (check-type dimensions list)
+  (check-type displaced-to (or null cuarray))
+  (mapc (lambda (dim) (check-type dim (integer 0 *))) dimensions)
   (make-instance 'cuarray
                  :dimensions dimensions
                  :datum      (if displaced-to
@@ -73,6 +77,8 @@
                                    *datatype* (reduce #'* dimensions)))))
 
 (defun make-zeros-cuarray (dimensions)
+  (check-type dimensions list)
+  (mapc (lambda (dim) (check-type dim (integer 0 *))) dimensions)
   (let* ((cuarr (make-cuarray dimensions))
          (total-size (cuarray-total-size cuarr)))
     (cffi:with-foreign-object (=>x *datatype* total-size)
@@ -88,6 +94,11 @@
       cuarr)))
 
 (defun make-custom-cuarray (dimensions &key (init 0.0) (step #'1+) (key #'identity))
+  (check-type dimensions list)
+  (mapc (lambda (dim) (check-type dim (integer 0 *))) dimensions)
+  (check-type init real)
+  (check-type step function)
+  (check-type key function)
   (let* ((cuarr (make-cuarray dimensions))
          (total-size (cuarray-total-size cuarr)))
     (cffi:with-foreign-object (=>a *datatype* total-size)
@@ -113,6 +124,7 @@
 
 (defun cuarray-dimension (cuarray axis-number)
   (check-type cuarray cuarray)
+  (check-type axis-number (integer 0 *))
   (nth axis-number (cuarray-dimensions cuarray)))
 
 (defun cuarray-total-size (cuarray)
@@ -122,6 +134,7 @@
 
 ;;; Convertors
 (defun array->cuarray (array)
+  (check-type array array)
   (let* ((dims (array-dimensions array))
          (cuarr (make-cuarray (array-dimensions array)))
          (datum (cuarray-datum cuarr))
@@ -142,6 +155,7 @@
       cuarr)))
 
 (defun cuarray->array (cuarray)
+  (check-type cuarray cuarray)
   (let* ((datum (cuarray-datum cuarray))
          (dims (cuarray-dimensions cuarray))
          (arr (make-array dims))
@@ -165,6 +179,7 @@
 
 ;;; BLAS functions
 (defun amax (x)
+  (check-type x cuarray)
   (assert (= (cuarray-rank x) 1) (x)
           'cuarray-rank-error :datum x :expected-rank 1)
   (flet ((%amax (&rest args)
@@ -176,6 +191,7 @@
       (cffi:mem-ref =>result *datatype*))))
 
 (defun amin (x)
+  (check-type x cuarray)
   (assert (= (cuarray-rank x) 1) (x)
           'cuarray-rank-error :datum x :expected-rank 1)
   (flet ((%amin (&rest args)
@@ -187,6 +203,7 @@
       (cffi:mem-ref =>result *datatype*))))
 
 (defun asum (x)
+  (check-type x cuarray)
   (assert (= (cuarray-rank x) 1) (x)
           'cuarray-rank-error :datum x :expected-rank 1)
   (flet ((%asum (&rest args)
@@ -198,6 +215,8 @@
       (cffi:mem-ref =>result *datatype*))))
 
 (defun axpy (alpha x y)
+  (check-type x cuarray)
+  (check-type y cuarray)
   (assert (= (cuarray-rank x) 1) (x)
           'cuarray-rank-error :datum x :expected-rank 1)
   (assert (= (cuarray-rank y) 1) (y)
@@ -217,6 +236,8 @@
       y)))
 
 (defun copy (x y)
+  (check-type x cuarray)
+  (check-type y cuarray)
   (assert (<= (cuarray-total-size x) (cuarray-total-size y)) (x y)
           'simple-error
           :format-control "The total size of ~%~2T~S~%is greater than~%~2T~S~%."
@@ -228,6 +249,8 @@
     (%copy *handle* (cuarray-total-size x) (cuarray-datum x) 1 (cuarray-datum y) 1)))
 
 (defun copy* (x y &key count (stride-x 1) (stride-y 1))
+  (check-type x cuarray)
+  (check-type y cuarray)
   (check-type count (or null (integer 0 *)))
   (if (null count)
       (assert (<= (/ (cuarray-total-size x) stride-x) (/ (cuarray-total-size y) stride-y)) (x y stride-x stride-y)
@@ -251,6 +274,13 @@
       (%copy *handle* count (cuarray-datum x) stride-x (cuarray-datum y) stride-y))))
 
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
+  (check-type alpha real)
+  (check-type a cuarray)
+  (check-type b cuarray)
+  (check-type beta real)
+  (check-type c cuarray)
+  (check-type a real)
+  (check-type b real)
   (assert (= (cuarray-rank a) 2) (a)
           'cuarray-rank-error :datum a :expected-rank 2)
   (assert (= (cuarray-rank b) 2) (b)
