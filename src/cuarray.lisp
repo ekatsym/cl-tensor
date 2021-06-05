@@ -117,7 +117,7 @@
 
 (defun cuarray-total-size (cuarray)
   (check-type cuarray cuarray)
-  (reduce #'* (cuarray-dimensions cuarray)))
+  (reduce #'* (cuarray-dimensions cuarray :initial-value 1)))
 
 
 ;;; Convertors
