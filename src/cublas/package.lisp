@@ -73,6 +73,7 @@
     ;; cuBLAS level-1 functions
     #:isamax #:idamax #:icamax #:izamax
     #:isamin #:idamin #:icamin #:izamin
+    #:sasum #:dasum #:casum #:zasum
     #:saxpy #:daxpy #:caxpy #:zaxpy
     #:scopy #:dcopy #:ccopy #:zcopy
     #:sdot #:ddot #:cdot #:zdot

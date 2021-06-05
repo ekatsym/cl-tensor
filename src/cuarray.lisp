@@ -189,6 +189,21 @@
         (%axpy handle n =>alpha =>x incx =>y incy)
         y))))
 
+(defun asum (x)
+  (assert (= (cuarray-rank x) 1) (x)
+          'cuarray-rank-error :datum x :expected-rank 1)
+  (flet ((%asum (&rest args)
+           (ecase *datatype*
+             (:float  (apply #'clt.cublas:sasum args))
+             (:double (apply #'clt.cublas:sasum args)))))
+    (let ((handle *handle*)
+          (n (cuarray-dimension x 0))
+          (=>x (cuarray-datum x))
+          (incx 1))
+      (cffi:with-foreign-object (=>result *datatype*)
+        (%asum handle n =>x incx =>result)
+        (cffi:mem-ref =>result *datatype*)))))
+
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (assert (= (cuarray-rank a) 2) (a)
           'cuarray-rank-error :datum a :expected-rank 2)
