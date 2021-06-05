@@ -23,14 +23,14 @@
     #:cuarray->array
 
     ;; BLAS level-1
-    #:axpy
+    #:amax
+    #:amin
     #:asum
+    #:axpy
     #:copy
     #:dot
     #:nrm2
     #:scal
-    #:amax
-    #:amin
 
     ;; BLAS level-2
     #:gemv
@@ -166,7 +166,10 @@
 
 ;;; BLAS functions
 (defun axpy (alpha x y)
-  (assert (= (cuarray-rank x) (cuarray-rank y) 1) (x y))
+  (assert (= (cuarray-rank x) 1) (x)
+          'cuarray-rank-unmatched-error :datum x :expected-rank 1)
+  (assert (= (cuarray-rank y) 1) (y)
+          'cuarray-rank-unmatched-error :datum y :expected-rank 1)
   (let ((x-len (cuarray-dimension x 0))
         (y-len (cuarray-dimension y 0)))
     (assert (= x-len y-len) (x y)
@@ -192,7 +195,12 @@
           y)))))
 
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
-  (assert (= (cuarray-rank a) (cuarray-rank b) (cuarray-rank c) 2) (a b c))
+  (assert (= (cuarray-rank a) 2) (a)
+          'cuarray-rank-unmatched-error :datum a :expected-rank 2)
+  (assert (= (cuarray-rank b) 2) (b)
+          'cuarray-rank-unmatched-error :datum b :expected-rank 2)
+  (assert (= (cuarray-rank c) 2) (c)
+          'cuarray-rank-unmatched-error :datum c :expected-rank 2)
   (let ((a-nrow (cuarray-dimension a 0))
         (a-ncol (cuarray-dimension a 1))
         (b-nrow (cuarray-dimension b 0))
@@ -246,10 +254,20 @@
           (%gemm handle transa transb m n k =>alpha =>a lda =>b ldb =>beta =>c ldc)
           c)))))
 
+(define-condition cuarray-rank-unmatched-error (error)
+  ((expected-rank :initarg :expected-rank
+                  :reader cuarray-rank-unmatched-error-expected-rank)
+   (datum :initarg :datum
+          :reader cuarray-rank-unmatched-error-datum))
+  (:report (lambda (o s)
+             (format s "The rank of the value~%~2T~S~%is not ~%~2T~S"
+                     (cuarray-rank-unmatched-error-datum o)
+                     (cuarray-rank-unmatched-error-expected-rank o)))))
+
 (define-condition cuarray-dimension-unmatched-error (error)
   ((datum1 :initarg :datum1
            :reader cuarray-dimension-unmatched-error-datum1)
-   (datum1 :initarg :datum2
+   (datum2 :initarg :datum2
            :reader cuarray-dimension-unmatched-error-datum2))
   (:report (lambda (o s)
              (format s "The dimensions~%~2T~D~%and~%~2T~D~%are different."
