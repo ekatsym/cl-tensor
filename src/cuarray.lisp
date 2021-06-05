@@ -216,6 +216,40 @@
       (%axpy *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1 (cuarray-datum y) 1)
       y)))
 
+(defun copy (x y)
+  (assert (<= (cuarray-total-size x) (cuarray-total-size y)) (x y)
+          'simple-error
+          :format-control "The total size of ~%~2T~S~%is greater than~%~2T~S~%."
+          :format-args x y)
+  (flet ((%copy (&rest args)
+           (ecase *datatype*
+             (:float  (apply #'clt.cublas:scopy args))
+             (:double (apply #'clt.cublas:dcopy args)))))
+    (%copy *handle* (cuarray-total-size x) (cuarray-datum x) 1 (cuarray-datum y) 1)))
+
+(defun copy* (x y &key count (stride-x 1) (stride-y 1))
+  (check-type count (or null (integer 0 *)))
+  (if (null count)
+      (assert (<= (/ (cuarray-total-size x) stride-x) (/ (cuarray-total-size y) stride-y)) (x y stride-x stride-y)
+              'simple-error
+              :format-control "The number of elements in~%~2T~S~%at stride~%~2T~D~% is greater than in~%~2T~S~%at stride~%~2T~D~%."
+              :format-args (list x stride-x y stride-y))
+      (progn
+        (assert (<= count (/ (cuarray-total-size x) stride-x)) (x count stride-x)
+                'simple-error
+                :format-control "The count~%~2T~D~%is greater than the number of elements in~%~2T~S~%at stride~%~2T~D~%."
+                :format-args (list count x stride-x))
+        (assert (<= count (/ (cuarray-total-size y) stride-y)) (y count stride-y)
+                'simple-error
+                :format-control "The count~%~2T~D~%is greater than the number of elements in~%~2T~S~%at stride~%~2T~D~%."
+                :format-args (list count y stride-y))))
+  (flet ((%copy (&rest args)
+           (ecase *datatype*
+             (:float  (apply #'clt.cublas:scopy args))
+             (:double (apply #'clt.cublas:dcopy args)))))
+    (let ((count (or count (cuarray-total-size x))))
+      (%copy *handle* count (cuarray-datum x) stride-x (cuarray-datum y) stride-y))))
+
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (assert (= (cuarray-rank a) 2) (a)
           'cuarray-rank-error :datum a :expected-rank 2)
