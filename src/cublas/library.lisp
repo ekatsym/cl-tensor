@@ -184,7 +184,7 @@
   (incx :int)
   (=>result :pointer))
 
-(defcublasfun_v2* ("cublas?asum" ?asum :downcase? t)
+(defcublasfun_v2* ("cublas?asum" ?asum)
   (handle handle)
   (n :int)
   (=>x :pointer)
