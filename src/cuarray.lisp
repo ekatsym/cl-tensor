@@ -129,7 +129,7 @@
 
 (defun cuarray-total-size (cuarray)
   (check-type cuarray cuarray)
-  (reduce #'* (cuarray-dimensions cuarray :initial-value 1)))
+  (reduce #'* (cuarray-dimensions cuarray) :initial-value 1))
 
 
 ;;; Convertors
@@ -239,7 +239,7 @@
   (check-type x cuarray)
   (check-type y cuarray)
   (assert (<= (cuarray-total-size x) (cuarray-total-size y)) (x y)
-          'simple-error
+          'simple-cuarray-error
           :format-control "The total size of ~%~2T~S~%is greater than~%~2T~S~%."
           :format-args x y)
   (flet ((%copy (&rest args)
@@ -254,16 +254,16 @@
   (check-type count (or null (integer 0 *)))
   (if (null count)
       (assert (<= (/ (cuarray-total-size x) stride-x) (/ (cuarray-total-size y) stride-y)) (x y stride-x stride-y)
-              'simple-error
+              'simple-cuarray-error
               :format-control "The number of elements in~%~2T~S~%at stride~%~2T~D~% is greater than in~%~2T~S~%at stride~%~2T~D~%."
               :format-args (list x stride-x y stride-y))
       (progn
         (assert (<= count (/ (cuarray-total-size x) stride-x)) (x count stride-x)
-                'simple-error
+                'simple-cuarray-error
                 :format-control "The count~%~2T~D~%is greater than the number of elements in~%~2T~S~%at stride~%~2T~D~%."
                 :format-args (list count x stride-x))
         (assert (<= count (/ (cuarray-total-size y) stride-y)) (y count stride-y)
-                'simple-error
+                'simple-cuarray-error
                 :format-control "The count~%~2T~D~%is greater than the number of elements in~%~2T~S~%at stride~%~2T~D~%."
                 :format-args (list count y stride-y))))
   (flet ((%copy (&rest args)
@@ -325,6 +325,8 @@
                =>beta
                (cuarray-datum c) m)
         c))))
+
+(define-condition cuarray-cuarray-error (simple-error) ())
 
 (define-condition cuarray-rank-error (error)
   ((expected-rank :initarg :expected-rank
