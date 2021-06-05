@@ -171,12 +171,9 @@
            (ecase *datatype*
              (:float  (apply #'clt.cublas:isamax args))
              (:double (apply #'clt.cublas:idamax args)))))
-    (let ((handle *handle*)
-          (n (cuarray-rank x))
-          (incx 1))
-      (cffi:with-foreign-object (=>result *datatype*)
-        (%amax handle n (cuarray-datum x) incx =>result)
-        (cffi:mem-ref =>result *datatype*)))))
+    (cffi:with-foreign-object (=>result *datatype*)
+      (%amax *handle* (cuarray-rank x) (cuarray-datum x) 1 =>result)
+      (cffi:mem-ref =>result *datatype*))))
 
 (defun amin (x)
   (assert (= (cuarray-rank x) 1) (x)
@@ -185,12 +182,9 @@
            (ecase *datatype*
              (:float  (apply #'clt.cublas:isamin args))
              (:double (apply #'clt.cublas:idamin args)))))
-    (let ((handle *handle*)
-          (n (cuarray-rank x))
-          (incx 1))
-      (cffi:with-foreign-object (=>result *datatype*)
-        (%amin handle n (cuarray-datum x) incx =>result)
-        (cffi:mem-ref =>result *datatype*)))))
+    (cffi:with-foreign-object (=>result *datatype*)
+      (%amin *handle* (cuarray-rank x) (cuarray-datum x) 1 =>result)
+      (cffi:mem-ref =>result *datatype*))))
 
 (defun asum (x)
   (assert (= (cuarray-rank x) 1) (x)
@@ -199,12 +193,9 @@
            (ecase *datatype*
              (:float  (apply #'clt.cublas:sasum args))
              (:double (apply #'clt.cublas:dasum args)))))
-    (let ((handle *handle*)
-          (n (cuarray-dimension x 0))
-          (incx 1))
-      (cffi:with-foreign-object (=>result *datatype*)
-        (%asum handle n (cuarray-datum x) incx =>result)
-        (cffi:mem-ref =>result *datatype*)))))
+    (cffi:with-foreign-object (=>result *datatype*)
+      (%asum *handle* (cuarray-dimension x 0) (cuarray-datum x) 1 =>result)
+      (cffi:mem-ref =>result *datatype*))))
 
 (defun axpy (alpha x y)
   (assert (= (cuarray-rank x) 1) (x)
@@ -217,17 +208,13 @@
            (ecase *datatype*
              (:float  (apply #'clt.cublas:saxpy args))
              (:double (apply #'clt.cublas:daxpy args)))))
-    (let ((handle *handle*)
-          (n (cuarray-dimension x 0))
-          (incx 1)
-          (incy 1))
-      (cffi:with-foreign-object (=>alpha *datatype*)
-        (setf (cffi:mem-ref =>alpha *datatype*)
-              (coerce alpha (ecase *datatype*
-                              (:float  'single-float)
-                              (:double 'double-float))))
-        (%axpy handle n =>alpha (cuarray-datum x) incx (cuarray-datum y) incy)
-        y))))
+    (cffi:with-foreign-object (=>alpha *datatype*)
+      (setf (cffi:mem-ref =>alpha *datatype*)
+        (coerce alpha (ecase *datatype*
+                        (:float  'single-float)
+                        (:double 'double-float))))
+      (%axpy *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1 (cuarray-datum y) 1)
+      y)))
 
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (assert (= (cuarray-rank a) 2) (a)
@@ -246,8 +233,7 @@
            (ecase *datatype*
              (:float  (apply #'clt.cublas:sgemm args))
              (:double (apply #'clt.cublas:dgemm args)))))
-    (let* ((handle *handle*)
-           (transa (ecase trans-a?
+    (let* ((transa (ecase trans-a?
                      ((nil :cublas-op-n) :cublas-op-n)
                      ((t :cublas-op-t)   :cublas-op-t)))
            (transb (ecase trans-b?
@@ -255,10 +241,7 @@
                      ((t :cublas-op-t)   :cublas-op-t)))
            (m (cuarray-dimension c 0))
            (n (cuarray-dimension c 1))
-           (k (cuarray-dimension a 1))
-           (lda m)
-           (ldb k)
-           (ldc m))
+           (k (cuarray-dimension a 1)))
       (cffi:with-foreign-objects ((=>alpha *datatype*)
                                   (=>beta  *datatype*))
         (setf (cffi:mem-ref =>alpha *datatype*)
@@ -271,12 +254,12 @@
                       (ecase *datatype*
                         (:float 'single-float)
                         (:double 'double-float))))
-        (%gemm handle transa transb m n k
+        (%gemm *handle* transa transb m n k
                =>alpha
-               (cuarray-datum a) lda
-               (cuarray-datum b) ldb
+               (cuarray-datum a) m
+               (cuarray-datum b) k
                =>beta
-               (cuarray-datum c) ldc)
+               (cuarray-datum c) m)
         c))))
 
 (define-condition cuarray-rank-error (error)
