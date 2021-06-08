@@ -302,6 +302,21 @@
       (%nrm2 *handle* (cuarray-dimension x 0) (cuarray-datum x) 1 =>result)
       (cffi:mem-ref =>result *datatype*))))
 
+(defun scal (alpha x)
+  (check-type alpha real)
+  (check-type x cuarray)
+  (assert (= (cuarray-rank x) 1) (x)
+          'cuarray-rank-error :datum x :expected-rank 1)
+  (flet ((%scal (&rest args)
+           (ecase *datatype*
+             (:float  (apply #'clt.cublas:sscal args))
+             (:double (apply #'clt.cublas:dscal args)))))
+    (cffi:with-foreign-object (=>alpha *datatype*)
+      (setf (cffi:mem-ref =>alpha *datatype*) (coerce alpha (ecase *datatype*
+                                                              (:float  'single-float)
+                                                              (:double 'double-float))))
+      (%scal *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1))))
+
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (check-type alpha real)
   (check-type a cuarray)
