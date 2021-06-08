@@ -408,7 +408,7 @@
            (transb (if trans-b? :cublas-op-t :cublas-op-n))
            (m (cuarray-dimension c 0))
            (n (cuarray-dimension c 1))
-           (k (cuarray-dimension a 1)))
+           (k (if trans-a? (cuarray-dimension a 0) (cuarray-dimension a 1))))
       (cffi:with-foreign-objects ((=>alpha *datatype*)
                                   (=>beta  *datatype*))
         (setf (cffi:mem-ref =>alpha *datatype*)
@@ -428,6 +428,50 @@
                =>beta
                (cuarray-datum c) m)
         c))))
+
+(defun geam (alpha a b c &key trans-a? trans-b?)
+  (check-type alpha real)
+  (check-type a cuarray)
+  (check-type b cuarray)
+  (check-type c cuarray)
+  (assert (= (cuarray-rank a) 2) (a)
+          'cuarray-rank-error :datum a :expected-rank 2)
+  (assert (= (cuarray-rank b) 2) (b)
+          'cuarray-rank-error :datum b :expected-rank 2)
+  (assert (= (cuarray-rank c) 2) (c)
+          'cuarray-rank-error :datum c :expected-rank 2)
+  (assert (= (cuarray-dimension a 0) (cuarray-dimension b 0)) (a b)
+          'cuarray-dimension-unmatched-error :datum1 a :axis1 0 :datum2 b :axis2 0)
+  (assert (= (cuarray-dimension a 1) (cuarray-dimension b 1)) (a b)
+          'cuarray-dimension-unmatched-error :datum1 a :axis1 1 :datum2 b :axis2 1)
+  (assert (= (cuarray-dimension b 0) (cuarray-dimension c 0)) (b c)
+          'cuarray-dimension-unmatched-error :datum1 b :axis1 0 :datum2 c :axis2 0)
+  (assert (= (cuarray-dimension b 1) (cuarray-dimension c 1)) (b c)
+          'cuarray-dimension-unmatched-error :datum1 b :axis1 1 :datum2 c :axis2 1)
+  (flet ((%geam (&rest args)
+           (ecase *datatype*
+             (:float  (apply #'clt.cublas:sgeam args))
+             (:double (apply #'clt.cublas:dgeam args)))))
+    (let ((transa (if trans-a? :cublas-op-t :cublas-op-n))
+          (transb (if trans-b? :cublas-op-t :cublas-op-n))
+          (m (cuarray-dimension c 0))
+          (n (cuarray-dimension c 1)))
+      (cffi:with-foreign-objects ((=>alpha *datatype*)
+                                  (=>beta *datatype*))
+        (setf (cffi:mem-ref =>alpha *datatype*)
+              (coerce alpha (ecase *datatype*
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (setf (cffi:mem-ref =>beta *datatype*)
+              (coerce beta (ecase *datatype*
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (%geam *handle* transa transb m n
+               =>alpha
+               (cuarray-datum a) m
+               (cuarray-datum b) m
+               =>beta
+               (cuarray-datum c) m)))))
 
 (define-condition cuarray-cuarray-error (simple-error) ())
 
