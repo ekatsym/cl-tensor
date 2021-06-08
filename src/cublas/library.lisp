@@ -292,6 +292,8 @@
 (defcublasfun_v2* ("cublas?gemv" ?gemv)
   (handle handle)
   (trans operation)
+  (m :int)
+  (n :int)
   (=>alpha :pointer)
   (=>a :pointer)
   (lda :int)
