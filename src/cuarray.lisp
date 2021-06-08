@@ -273,6 +273,23 @@
     (let ((count (or count (cuarray-total-size x))))
       (%copy *handle* count (cuarray-datum x) stride-x (cuarray-datum y) stride-y))))
 
+(defun dot (x y)
+ (check-type x cuarray)
+ (check-type y cuarray)
+ (assert (= (cuarray-rank x) 1) (x)
+         'cuarray-rank-error :datum x :expected-rank 2)
+ (assert (= (cuarray-rank y) 1) (y)
+         'cuarray-rank-error :datum y :expected-rank 2)
+ (assert (= (cuarray-dimension x 0) (cuarray-dimension y 0)) (x y)
+         'cuarray-dimension-unmatched-error :datum1 x :axis1 0 :datum2 :axis2 0)
+ (flet ((%dot (&rest args)
+          (ecase *datatype*
+            (:float  (apply #'clt.cublas:sdot args))
+            (:double (apply #'clt.cublas:ddot args)))))
+   (cffi:with-foreign-object (=>result *datatype*)
+     (%dot *handle* (cuarray-dimension x 0) (cuarray-datum x) 1 (cuarray-datum y) 1 =>result)
+     (cffi:mem-ref =>result *datatype*))))
+
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (check-type alpha real)
   (check-type a cuarray)
