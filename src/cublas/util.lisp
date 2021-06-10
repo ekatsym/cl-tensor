@@ -101,6 +101,36 @@
      (with-handles ,(rest vars) ,@body)))
 
 ;;; macros for definition
+(defmacro defcublasfun ((cname lisp-name) &body args)
+  (let ((%lisp-name (intern (concatenate 'string "%"(string lisp-name)))))
+    `(progn
+       (defun ,lisp-name (,@(mapcar #'first args))
+         (check-status (,%lisp-name ,@(mapcar #'first args))))
+       (defcfun (,cname ,%lisp-name) status
+         ,@args))))
+
+(defmacro defcublasfun* ((cname lisp-name &key downcase? real-only? complex-only? single-only? add-half?) &body args)
+  (assert (not (and real-only? complex-only?)) (real-only? complex-only?)
+          ":REAL-ONLY? and :COMPLEX-ONLY? were both supplied.")
+  (let ((types (mapcar (if downcase? #'char-downcase #'identity)
+                       (cond ((and real-only? add-half?)    (list #\S #\D #\H))
+                             (real-only?                    (list #\S #\D))
+                             ((and complex-only? add-half?) (list #\C #\Z #\H))
+                             (complex-only?                 (list #\C #\Z))
+                             ((and single-only? add-half?)  (list #\S #\C #\H))
+                             (single-only?                  (list #\S #\C))
+                             (add-half?                     (list #\S #\D #\C #\Z #\H))
+                             (t                             (list #\S #\D #\C #\Z))))))
+    `(progn
+       ,@(mapcar
+           (lambda (tp)
+             `(defcublasfun (,(substitute tp #\? cname)
+                              ,(intern
+                                 (string-upcase
+                                   (substitute tp #\? (string lisp-name)))))
+                ,@args))
+           types))))
+
 (defmacro defcublasfun_v2 ((cname lisp-name) &body args)
   (let ((cname_v2 (concatenate 'string cname "_v2"))
         (%lisp-name (intern (concatenate 'string "%"(string lisp-name)))))

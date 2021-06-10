@@ -790,7 +790,7 @@
 
 
 ;;; Define BLAS-like functions
-(defcublasfun_v2* ("cublas?geam" ?geam)
+(defcublasfun* ("cublas?geam" ?geam)
   (handle handle)
   (transa operation)
   (transb operation)
@@ -805,7 +805,7 @@
   (=>c :pointer)
   (ldc :int))
 
-(defcublasfun_v2* ("cublas?dgmm" ?dgmm)
+(defcublasfun* ("cublas?dgmm" ?dgmm)
   (handle handle)
   (mode side-mode)
   (m :int)
@@ -817,7 +817,7 @@
   (=>c :pointer)
   (ldc :int))
 
-(defcublasfun_v2* ("cublas?getrfBatched" ?getrf-batched)
+(defcublasfun* ("cublas?getrfBatched" ?getrf-batched)
   (handle handle)
   (n :int)
   (=>a-array :pointer)
@@ -826,7 +826,7 @@
   (=>info-array :pointer)
   (batch-size :int))
 
-(defcublasfun_v2* ("cublas?getrsBatched" ?getrs-batched)
+(defcublasfun* ("cublas?getrsBatched" ?getrs-batched)
   (handle handle)
   (trans operation)
   (n :int)
@@ -839,7 +839,7 @@
   (=>info :pointer)
   (batch-size :int))
 
-(defcublasfun_v2* ("cublas?riBatched" ?ri-batched)
+(defcublasfun* ("cublas?riBatched" ?ri-batched)
   (handle handle)
   (n :int)
   (=>a-array :pointer)
@@ -850,7 +850,7 @@
   (=>info-array :int)
   (batch-size :pointer))
 
-(defcublasfun_v2* ("cublas?matinvBatched" ?matinv-batched)
+(defcublasfun* ("cublas?matinvBatched" ?matinv-batched)
   (handle handle)
   (=>a :pointer)
   (lda :int)
@@ -859,7 +859,7 @@
   (=>info :pointer)
   (batch-size :int))
 
-(defcublasfun_v2* ("cublas?geqrfBatched" ?geqrf-batched)
+(defcublasfun* ("cublas?geqrfBatched" ?geqrf-batched)
   (handle handle)
   (m :int)
   (n :int)
@@ -869,7 +869,7 @@
   (=>info :pointer)
   (batch-size :int))
 
-(defcublasfun_v2* ("cublas?gelsBatched" ?gels-batched)
+(defcublasfun* ("cublas?gelsBatched" ?gels-batched)
   (handle handle)
   (trans operation)
   (m :int)
@@ -883,7 +883,7 @@
   (=>dev-info-array :pointer)
   (batch-size :int))
 
-(defcublasfun_v2* ("cublas?tpttr" ?tpttr)
+(defcublasfun* ("cublas?tpttr" ?tpttr)
   (handle handle)
   (uplo fill-mode)
   (n :int)
@@ -891,7 +891,7 @@
   (=>a :pointer)
   (lda :int))
 
-(defcublasfun_v2* ("cublas?trttp" ?trttp)
+(defcublasfun* ("cublas?trttp" ?trttp)
   (handle handle)
   (uplo fill-mode)
   (n :int)
@@ -899,7 +899,7 @@
   (lda :int)
   (=>ap :pointer))
 
-(defcublasfun_v2* ("cublas?gemmEx" ?gemm* :single-only? t)
+(defcublasfun* ("cublas?gemmEx" ?gemm* :single-only? t)
   (handle handle)
   (transa operation)
   (transb operation)
@@ -918,7 +918,7 @@
   (c-type cuda-data-type)
   (ldc :int))
 
-(defcublasfun_v2 ("cublasGemmEx" gemm*)
+(defcublasfun ("cublasGemmEx" gemm*)
   (handle handle)
   (transa operation)
   (transb operation)
@@ -939,7 +939,7 @@
   (compute-type compute-type)
   (algo gemm-algo))
 
-(defcublasfun_v2 ("cublasGemmStridedBatchedEx" gemm-strided-batched*)
+(defcublasfun ("cublasGemmStridedBatchedEx" gemm-strided-batched*)
   (handle handle)
   (transa operation)
   (transb operation)
@@ -964,7 +964,7 @@
   (compute-type compute-type)
   (algo gemm-algo))
 
-(defcublasfun_v2 ("cublasCsyrkEx" csyrk*)
+(defcublasfun ("cublasCsyrkEx" csyrk*)
   (handle handle)
   (uplo fill-mode)
   (n :int)
@@ -978,7 +978,7 @@
   (c-type cuda-data-type)
   (ldc :int))
 
-(defcublasfun_v2 ("cublasCsyrk3mEx" csyrk3m*)
+(defcublasfun ("cublasCsyrk3mEx" csyrk3m*)
   (handle handle)
   (uplo fill-mode)
   (n :int)
@@ -992,7 +992,7 @@
   (c-type cuda-data-type)
   (ldc :int))
 
-(defcublasfun_v2 ("cublasCherkEx" cherk*)
+(defcublasfun ("cublasCherkEx" cherk*)
   (handle handle)
   (uplo operation)
   (trans operation)
@@ -1007,7 +1007,7 @@
   (c-type cuda-data-type)
   (ldc :int))
 
-(defcublasfun_v2 ("cublasCherk3mEx" cherk3m*)
+(defcublasfun ("cublasCherk3mEx" cherk3m*)
   (handle handle)
   (uplo fill-mode)
   (trans operation)
@@ -1022,7 +1022,7 @@
   (c-type cuda-data-type)
   (ldc :int))
 
-(defcublasfun_v2 ("cublasNrm2Ex" nrm2*)
+(defcublasfun ("cublasNrm2Ex" nrm2*)
   (handle handle)
   (n :int)
   (=>x :pointer)
@@ -1032,7 +1032,7 @@
   (result-type cuda-data-type)
   (execution-type cuda-data-type))
 
-(defcublasfun_v2 ("cublasAxpyEx" axpy*)
+(defcublasfun ("cublasAxpyEx" axpy*)
   (handle handle)
   (n :int)
   (=>alpha :pointer)
@@ -1045,7 +1045,7 @@
   (incy :int)
   (execution-type cuda-data-type))
 
-(defcublasfun_v2 ("cublasDotEx" dot*)
+(defcublasfun ("cublasDotEx" dot*)
   (handle handle)
   (n :int)
   (=>x :pointer)
@@ -1058,7 +1058,7 @@
   (result-type cuda-data-type)
   (execution-type cuda-data-type))
 
-(defcublasfun_v2 ("cublasDotcEx" dotc*)
+(defcublasfun ("cublasDotcEx" dotc*)
   (handle handle)
   (n :int)
   (=>x :pointer)
@@ -1071,7 +1071,7 @@
   (result-type cuda-data-type)
   (execution-type cuda-data-type))
 
-(defcublasfun_v2 ("cublasRotEx" rot*)
+(defcublasfun ("cublasRotEx" rot*)
   (handle handle)
   (n :int)
   (=>x :pointer)
@@ -1085,7 +1085,7 @@
   (cs-type cuda-data-type)
   (execution-type cuda-data-type))
 
-(defcublasfun_v2 ("cudaScalEx" scal*)
+(defcublasfun ("cudaScalEx" scal*)
   (handle handle)
   (n :int)
   (=>alpha :pointer)
