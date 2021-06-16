@@ -116,6 +116,12 @@
                               :cuda-memcpy-default)
       cuarr)))
 
+(defun identity-cuarray (rank)
+  (make-custom-cuarray (list rank rank)
+                       :key (lambda (n) (if (multiple-value-call #'= (floor n rank))
+                                            1.0
+                                            0.0))))
+
 
 ;;; Accessors
 (defun cuarray-rank (cuarray)
