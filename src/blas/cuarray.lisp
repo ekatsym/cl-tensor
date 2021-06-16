@@ -281,7 +281,7 @@
  (assert (= (cuarray-rank y) 1) (y)
          'cuarray-rank-error :datum y :expected-rank 1)
  (assert (= (cuarray-dimension x 0) (cuarray-dimension y 0)) (x y)
-         'cuarray-dimension-unmatched-error :datum1 x :axis1 0 :datum2 :axis2 0)
+         'cuarray-dimension-unmatched-error :datum1 x :axis1 0 :datum2 y :axis2 0)
  (flet ((%dot (&rest args)
           (ecase *datatype*
             (:float  (apply #'clt.cublas:sdot args))
@@ -315,7 +315,8 @@
       (setf (cffi:mem-ref =>alpha *datatype*) (coerce alpha (ecase *datatype*
                                                               (:float  'single-float)
                                                               (:double 'double-float))))
-      (%scal *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1))))
+      (%scal *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1)
+      x)))
 
 (defun gemv (alpha a x beta y &key trans-a?)
   (declare (optimize (debug 3)))
@@ -388,6 +389,14 @@
                               (:double 'double-float))))
         (%ger *handle* m n =>alpha (cuarray-datum x) 1 (cuarray-datum y) 1 (cuarray-datum a) m)
         a))))
+
+(let ((x (make-custom-cuarray '(5)))
+      (y (make-custom-cuarray '(5) :init 1 :step #'identity))
+      (a (make-cuarray '(5 5))))
+  (with-handle ()
+    (print x)
+    (print y)
+    (ger 1.0 x y a)))
 
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (check-type alpha real)

@@ -5,19 +5,23 @@
   :defsystem-depends-on ("cffi-grovel")
   :depends-on ("cffi")
   :components ((:module "src"
-                :serial t
                 :components
                 ((:file "package")
-                 (:module "cublas"
-                  :serial t
+                 (:module "blas"
+                  :depends-on ("util")
                   :components
-                  ((:file "package")
-                   (:cffi-grovel-file "grovel")
-                   (:file "util")
-                   (:file "library")))
-                 (:file "util")
-                 (:file "cuarray")
-                 )))
+                  ((:module "cublas"
+                    :serial t
+                    :components
+                    ((:file "package")
+                     (:cffi-grovel-file "grovel")
+                     (:file "util")
+                     (:file "library")))
+                   (:module "openblas")
+                   (:file "cuarray" :depends-on ("cublas"))
+                   (:file "oparray" :depends-on ("openblas"))
+                   (:file "main" :depends-on ("cuarray" "oparray"))))
+                 (:file "util"))))
   :description ""
   :in-order-to ((test-op (test-op "cl-tensor/tests"))))
 

@@ -1,4 +1,4 @@
-(in-package :cl-tensor.cublas)
+(in-package :cl-tensor.blas.cublas)
 
 (include "cublas_v2.h")
 

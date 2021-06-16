@@ -1,4 +1,4 @@
-(in-package :cl-tensor.cublas)
+(in-package :cl-tensor.blas.cublas)
 
 
 ;;; CUDA
