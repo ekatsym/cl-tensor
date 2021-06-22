@@ -178,10 +178,6 @@
                 (cffi:mem-aref carr *datatype* col-major-index))))
       arr)))
 
-(defun cuarray (x)
-  (etypecase x
-    (array (array->cuarray x))
-    (number (array->cuarray (make-array '() :initial-element x)))))
 
 ;;; BLAS functions
 (defun amax (x)
@@ -396,6 +392,7 @@
         (%ger *handle* m n =>alpha (cuarray-datum x) 1 (cuarray-datum y) 1 (cuarray-datum a) m)
         a))))
 
+#|
 (let ((x (make-custom-cuarray '(5)))
       (y (make-custom-cuarray '(5) :init 1 :step #'identity))
       (a (make-cuarray '(5 5))))
@@ -403,6 +400,7 @@
     (print x)
     (print y)
     (ger 1.0 x y a)))
+|#
 
 (defun gemm (alpha a b beta c &key trans-a? trans-b?)
   (check-type alpha real)

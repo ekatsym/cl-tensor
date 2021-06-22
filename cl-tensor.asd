@@ -18,8 +18,9 @@
                      (:file "util")
                      (:file "library")))
                    (:module "openblas")
-                   (:file "cuarray" :depends-on ("cublas"))
-                   (:file "oparray" :depends-on ("openblas"))
+                   (:file "package")
+                   (:file "cuarray" :depends-on ("cublas" "package"))
+                   (:file "oparray" :depends-on ("openblas" "package"))
                    (:file "main" :depends-on ("cuarray" "oparray"))))
                  (:file "util"))))
   :description ""
