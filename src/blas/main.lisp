@@ -12,7 +12,7 @@
     #:element-type #:*element-type* #:s #:d #:c #:z
 
     ;; Constructor
-    #:make-blas-array #:make-blas-array+ #:make-blas-array*
+    #:make-blas-array #:make-blas-array*
     #:make-identity-matrix
 
     ;; Accessor
@@ -44,12 +44,12 @@
 (defgeneric finish-blas (blas-name state))
 
 (defmacro with-blas ((blas-name &optional state) &body body)
-  (if state
-      `(let ((*blas-state* ,state))
+  `(if ,state
+       (let ((*blas-state* ,state))
          ,@body)
-      `(let ((*blas-state* (start-blas ',blas-name)))
+       (let ((*blas-state* (start-blas ',blas-name)))
          (unwind-protect (multiple-value-prog1 (progn ,@body))
-           (finish-blas ',blas-name)))))
+           (finish-blas ',blas-name *blas-state*)))))
 
 ;;; Element Type
 (deftype element-type ()
@@ -60,8 +60,6 @@
 
 ;;; Constructor
 (defgeneric make-blas-array (blas-name dimensions))
-
-(defgeneric make-blas-array+ (blas-name dimensions &optional initial-element))
 
 (defgeneric make-blas-array* (blas-name dimensions &key init step key))
 
@@ -83,7 +81,7 @@
   (length (blas-array-dimensions blas-array)))
 
 (defun blas-array-total-size (blas-array)
-  (reduce #'+ (blas-array-dimensions blas-array) :initial-value 0))
+  (reduce #'* (blas-array-dimensions blas-array) :initial-value 1))
 
 
 ;;; Converter

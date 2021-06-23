@@ -108,7 +108,7 @@
 
 (defmacro assert-dimension (blas-array axis-number dimension)
   `(assert (= (blas-array-dimension ,blas-array ,axis-number) ,dimension)
-           (,blas-array ,axis-number)
+           (,blas-array)
            'dimension-error
            :datum ,blas-array
            :expected-type (list ,axis-number ,dimension)))
@@ -132,7 +132,7 @@
 (defmacro assert-dimension-match (blas-array1 axis-number1 blas-array2 axis-number2)
   `(assert (= (blas-array-dimension ,blas-array1 ,axis-number1)
               (blas-array-dimension ,blas-array2 ,axis-number2))
-           (,blas-array1 ,axis-number1 ,blas-array2 ,axis-number2)
+           (,blas-array1 ,blas-array2)
            'dimension-unmatch-error
            :datum1 (list ,axis-number1 ,blas-array1)
            :datum2 (list ,axis-number2 ,blas-array2)))
