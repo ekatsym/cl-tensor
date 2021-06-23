@@ -10,18 +10,26 @@
                  (:module "blas"
                   :depends-on ("util")
                   :components
-                  ((:module "cublas"
+                  ((:file "main")
+                   (:module "cublas"
                     :serial t
                     :components
                     ((:file "package")
                      (:cffi-grovel-file "grovel")
                      (:file "util")
                      (:file "library")))
-                   (:module "openblas")
-                   (:file "package")
-                   (:file "cuarray" :depends-on ("cublas" "package"))
-                   (:file "oparray" :depends-on ("openblas" "package"))
-                   (:file "main" :depends-on ("cuarray" "oparray"))))
+                   (:module "openblas"
+                    :serial t
+                    :components
+                    ((:file "package")
+                     (:cffi-grovel-file "grovel")
+                     (:file "util")
+                     (:file "library")))
+                   (:file "assert"  :depends-on ("main"))
+                   (:file "array"   :depends-on (           "main" "assert"))
+                   (:file "cuarray" :depends-on ("cublas"   "main" "assert"))
+                   (:file "oparray" :depends-on ("openblas" "main" "assert"))
+                   (:file "convert" :depends-on ("main" "array" "cuarray" "oparray"))))
                  (:file "util"))))
   :description ""
   :in-order-to ((test-op (test-op "cl-tensor/tests"))))

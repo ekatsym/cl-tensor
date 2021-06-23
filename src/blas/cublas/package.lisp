@@ -1,4 +1,4 @@
-(defpackage cl-tensor.blas.cublas
+(defpackage :cl-tensor.blas.cublas
   (:nicknames :clt.cublas :clt.cb)
   (:use :common-lisp :cffi)
   (:export

@@ -1,67 +1,51 @@
-(defpackage cl-tensor.cuarray
-  (:nicknames :clt.cuarray :clt.ca)
-  (:use :common-lisp cl-tensor.util)
+(defpackage cl-tensor.blas.cuarray
+  (:nicknames :clt.cuarray :clt.b.ca)
+  (:use :common-lisp cl-tensor.blas cl-tensor.util)
+  (:import-from :cl-tensor.blas.cublas #:create-handle #:destroy)
   (:export
-    ;; Core
-    #:*handle*
-    #:*datatype*
-    #:with-handle
-    #:cuarray
-
-    ;; Constructor
-    #:make-cuarray
-    #:make-zeros-cuarray
-    #:make-custom-cuarray
-
-    ;; Accessor
-    #:cuarray-rank
-    #:cuarray-dimension
-    #:cuarray-total-size
-
-    ;; Converter
-    #:array->cuarray
-    #:cuarray->array
-
-    ;; BLAS level-1
-    #:amax
-    #:amin
-    #:asum
-    #:axpy
-    #:copy
-    #:copy*
-    #:dot
-    #:nrm2
-    #:scal
-
-    ;; BLAS level-2
-    #:gemv
-    #:ger
-
-    ;; BLAS level-3
-    #:gemm
-
-    ;; BLAS-like extensions
-    #:geam))
-(in-package :cl-tensor.cuarray)
+    #:cuarray->array))
+(in-package :cl-tensor.blas.cuarray)
 
 
-;;; Core
-(defparameter *handle* nil)
+;;; Definition
+(defclass cuarray ()
+  ((dimensions :initarg :dimensions :reader cuarray-dimensions)
+   (datum :initarg :datum :reader cuarray-datum))) 
+
+(defmethod print-object ((object cuarray) stream)
+  (format stream "#<CUARRAY :DIMENSIONS ~A :DATUM ~S>"
+          (cuarray-dimensions object)
+          (cuarray->array object)))
+
+
+;;; State
+(defmethod start-blas ((blas-name (eql 'cublas)))
+  (create-handle))
+
+(defmethod finish-blas ((blas-name (eql 'cublas)) state)
+  (destroy state))
+
+
+;;; Element Type
+(defun element-type ()
+  (check-type *element-type* element-type)
+  (ecase *element-type*
+    (s :float)
+    (d :double)))
+
+
+;;; Constructor
+
+
+#|
+  ;;; Core
+  (defparameter *handle* nil)
 (defparameter *datatype* :float)
 
 (defmacro with-handle ((&optional handle) &body body)
   (if handle
       `(let ((*handle* ,handle)) (progn ,@body))
       `(clt.cublas:with-handle *handle* ,@body)))
-
-(defclass cuarray ()
-  ((dimensions :initarg :dimensions :reader cuarray-dimensions)
-   (datum :initarg :datum :reader cuarray-datum)))
-
-(defmethod print-object ((object cuarray) stream)
-  (format stream "#<CUARRAY :DIMENSIONS ~A :DATUM ~S>"
-          (cuarray-dimensions object)
-          (cuarray->array object)))
 
 
 ;;; Constructors
@@ -576,3 +560,4 @@
                      (cuarray-dimension-unmatched-error-datum1 o)
                      (cuarray-dimension-unmatched-error-axis2 o)
                      (cuarray-dimension-unmatched-error-datum2 o)))))
+|#
