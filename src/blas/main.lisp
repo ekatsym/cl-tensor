@@ -124,7 +124,7 @@ Y: vector."))
 
 (defgeneric axpy (alpha x y)
   (:documentation
-"Y <- ALPHA * X.
+"Y <- ALPHA * X + Y.
 ALPHA: scalar.
 X: vector.
 Y: vector."))
@@ -149,7 +149,7 @@ X: vector."))
     "Return argmax_{x_i \in X} |x_i|."))
 
 ;; BLAS Level-2
-(defgeneric gemv (alpha a x beta y &key trans? diag?)
+(defgeneric gemv (alpha a x beta y &key trans?)
   (:documentation
 "Y <- ALPHA * A * X + BETA * Y.
 Y <- ALPHA * A^T * X + BETA * Y.
@@ -161,7 +161,7 @@ X: vector.
 BETA: scalar.
 Y: vector."))
 
-(defgeneric gbmv (alpha a x beta y &key trans? diag? band-width)
+(defgeneric gbmv (alpha a x beta y &key trans? kl ku)
   (:documentation
 "Y <- ALPHA * A * X + BETA * Y.
 Y <- ALPHA * A^T * X + BETA * Y.

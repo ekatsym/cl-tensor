@@ -170,14 +170,14 @@
 
 
 ;;; Define cuBLAS level-1 functions
-(defcublasfun_v2* ("cublasI?amax" i?amax :downcase? t)
+(defcublasfun_v2* ("cublasI?amax" ?amax :downcase? t)
   (handle handle)
   (n :int)
   (=>x :pointer)
   (incx :int)
   (=>result :pointer))
 
-(defcublasfun_v2* ("cublasI?amin" i?amin :downcase? t)
+(defcublasfun_v2* ("cublasI?amin" ?amin :downcase? t)
   (handle handle)
   (n :int)
   (=>x :pointer)
@@ -273,7 +273,7 @@
   (incy :int))
 
 ;;; Define cuBLAS level-2 functions
-(defcublasfun_v2* ("cublas?gdmv" ?gdmv)
+(defcublasfun_v2* ("cublas?gbmv" ?gbmv)
   (handle handle)
   (trans operation)
   (m :int)

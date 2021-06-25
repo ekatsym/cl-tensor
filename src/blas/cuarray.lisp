@@ -143,7 +143,7 @@
   (assert-rank x 1)
   (let* ((n (blas-array-dimension x 0))
          (y (make-blas-array 'cublas (list n n))))
-    (copy* x y :stride-y (1+ n))))
+    (copy x y :stride-y (1+ n))))
 
 (defmethod reshape (dimensions (a cuarray))
   (check-type dimensions list)
@@ -197,6 +197,43 @@
 
 
 ;;; BLAS
+(defmacro with-blas-function (blas-function &body body)
+  (flet ((symbolicate (&rest things)
+           (intern
+             (coerce
+               (reduce (lambda (thing acc)
+                         (append (coerce (string thing) 'list) acc))
+                       things
+                       :initial-value '()
+                       :from-end t)
+               'string)
+             :cl-tensor.blas.cublas)))
+    (let ((sf (symbolicate 's (subseq (string blas-function) 1)))
+          (df (symbolicate 'd (subseq (string blas-function) 1)))
+          (g!args (gensym "ARGS")))
+      `(flet ((,blas-function (&rest ,g!args)
+                (ecase (element-type)
+                  (:float  (apply (function ,sf) ,g!args))
+                  (:double (apply (function ,df) ,g!args)))))
+         ,@body))))
+
+;; BLAS Level-1
+(defmethod scal (alpha (x cuarray))
+  (check-type alpha number)
+  (with-blas-function ?scal
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-object (=>alpha (element-type))
+        (setf (cffi:mem-ref =>alpha (element-type))
+              (coerce alpha (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (?scal *blas-state*
+               (blas-array-total-size x)
+               =>alpha
+               (cuarray-datum x)
+               1)
+        x))))
+
 (defmethod copy ((x cuarray) (y cuarray) &key count (stride-x 1) (stride-y 1))
   (check-type count (or null (integer 0 *)))
   (check-type stride-x (integer 1 *))
@@ -220,8 +257,171 @@
                stride-x
                (cuarray-datum y)
                stride-y)
-        y))) )
+        y))))
 
+(defmethod axpy (alpha (x cuarray) (y cuarray))
+  (check-type alpha number)
+  (assert-total-size-match x y)
+  (with-blas-function ?axpy
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-object (=>alpha (element-type))
+        (setf (cffi:mem-ref =>alpha (element-type))
+              (coerce alpha (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (?axpy *blas-state*
+               (blas-array-total-size x)
+               =>alpha
+               (cuarray-datum x) 1
+               (cuarray-datum y) 1)
+        y))))
+
+(defmethod dot ((x cuarray) (y cuarray))
+  (assert-dimensions-match x y)
+  (with-blas-function ?dot
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-object (=>result (element-type))
+        (?dot *blas-state*
+              (blas-array-total-size x)
+              (cuarray-datum x) 1
+              (cuarray-datum y) 1
+              =>result)
+        (cffi:mem-ref =>result (element-type))))))
+
+(defmethod nrm2 ((x cuarray))
+  (with-blas-function ?nrm2
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-object (=>result (element-type))
+        (?nrm2 *blas-state*
+               (blas-array-total-size x)
+               (cuarray-datum x)
+               1
+               =>result)
+        (cffi:mem-ref =>result (element-type))))))
+
+(defmethod asum ((x cuarray))
+  (with-blas-function ?asum
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-object (=>result (element-type))
+        (?asum *blas-state*
+               (blas-array-total-size x)
+               (cuarray-datum x)
+               1
+               =>result)
+        (cffi:mem-ref =>result (element-type))))))
+
+(defmethod amax ((x cuarray))
+  (with-blas-function ?amax
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-object (=>result (element-type))
+        (?amax *blas-state*
+               (blas-array-total-size x)
+               (cuarray-datum x)
+               1
+               =>result)
+        (cffi:mem-ref =>result (element-type))))))
+
+;; BLAS Level-2
+(defmethod gemv (alpha (a cuarray) (x cuarray) beta (y cuarray) &key trans?)
+  (check-type alpha number) (check-type beta number)
+  (assert-rank a 2) (assert-rank x 1) (assert-rank y 1)
+  (with-blas-function ?gemv
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-objects ((=>alpha (element-type))
+                                  (=>beta (element-type)))
+        (setf (cffi:mem-ref =>alpha (element-type))
+              (coerce alpha (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (setf (cffi:mem-ref =>beta (element-type))
+              (coerce beta (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (?gemv *blas-state*
+               (if trans? :cublas-op-n :cublas-op-t)
+               (blas-array-dimension a 1)
+               (blas-array-dimension a 0)
+               =>alpha
+               (cuarray-datum a) (blas-array-dimension a 1)
+               (cuarray-datum x) 1
+               =>beta
+               (cuarray-datum y) 1)
+        y))))
+
+(defmethod gbmv (alpha (a cuarray) (x cuarray) beta (y cuarray) &key trans? (kl 0) (ku 0))
+  (check-type alpha number) (check-type beta number)
+  (assert-rank a 2) (assert-rank x 1) (assert-rank y 1)
+  (with-blas-function ?gbmv
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-objects ((=>alpha (element-type))
+                                  (=>beta (element-type)))
+        (setf (cffi:mem-ref =>alpha (element-type))
+              (coerce alpha (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (setf (cffi:mem-ref =>beta (element-type))
+              (coerce beta (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (?gbmv *blas-state*
+               (if trans? :cublas-op-n :cublas-op-t)
+               (blas-array-dimension a 1)
+               (blas-array-dimension a 0)
+               kl
+               ku
+               =>alpha
+               (cuarray-datum a) (blas-array-dimension a 1)
+               (cuarray-datum x) 1
+               =>beta
+               (cuarray-datum y) 1)
+        y))))
+
+
+(defmethod gemm (alpha (a cuarray) (b cuarray) beta (c cuarray) &key trans-a? trans-b?)
+  (check-type alpha number) (check-type beta number)
+  (assert-rank a 2) (assert-rank b 2) (assert-rank c 2)
+  (cond ((and (not trans-a?) (not trans-b?)) (assert-dimension-match c 0 a 0)
+                                             (assert-dimension-match c 1 b 1)
+                                             (assert-dimension-match a 1 b 0))
+
+        ((and (not trans-a?) trans-b?)       (assert-dimension-match c 0 a 0)
+                                             (assert-dimension-match c 1 b 0)
+                                             (assert-dimension-match a 1 b 1))
+
+        ((and trans-a? (not trans-b?))       (assert-dimension-match c 0 a 1)
+                                             (assert-dimension-match c 1 b 1)
+                                             (assert-dimension-match a 0 b 0))
+
+        ((and trans-a? trans-b?)             (assert-dimension-match c 0 a 1)
+                                             (assert-dimension-match c 1 b 0)
+                                             (assert-dimension-match a 0 b 1)))
+  (flet ((%gemm (&rest args)
+           (ecase (element-type)
+             (:float  (apply #'clt.cublas:sgemm args))
+             (:double (apply #'clt.cublas:dgemm args)))))
+    (with-blas (cublas *blas-state*)
+      (cffi:with-foreign-objects ((=>alpha (element-type))
+                                  (=>beta (element-type)))
+        (setf (cffi:mem-ref =>alpha (element-type))
+              (coerce alpha (ecase (element-type)
+                              (:float  'single-float)
+                              (:double 'double-float))))
+        (setf (cffi:mem-ref =>beta (element-type))
+              (coerce beta (ecase (element-type)
+                             (:float  'single-float)
+                             (:double 'double-float))))
+        (%gemm *blas-state*
+               (if trans-a? :cublas-op-t :cublas-op-n)
+               (if trans-b? :cublas-op-t :cublas-op-n)
+               (blas-array-dimension c 1)
+               (blas-array-dimension c 0)
+               (blas-array-dimension a (if trans-a? 0 1))
+               =>alpha
+               (cuarray-datum b) (blas-array-dimension b 1)
+               (cuarray-datum a) (blas-array-dimension a 1)
+               =>beta
+               (cuarray-datum c) (blas-array-dimension c 1))
+        c))))
 
 
 #|
