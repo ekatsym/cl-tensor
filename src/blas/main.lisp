@@ -29,7 +29,7 @@
     #:nrm2 #:asum #:amax
 
     ;; BLAS Level-2
-    #:gemv #:gbmv #:ger
+    #:gemv #:ger
 
     ;; BLAS Level-3
     #:gemm))

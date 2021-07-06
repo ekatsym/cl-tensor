@@ -3,7 +3,7 @@
   (:use :common-lisp :cl-tensor.blas :cl-tensor.util :cl-tensor.blas.assert)
   (:import-from cl-tensor.blas.cublas #:create-handle #:destroy)
   (:export
-    #:cuarray->array))
+    #:cuarray->array #:array->cuarray))
 (in-package :cl-tensor.blas.cuarray)
 
 
@@ -197,7 +197,7 @@
 
 
 ;;; BLAS
-(defmacro with-blas-function (blas-function &body body)
+(defmacro with-cublas-function (cublas-function &body body)
   (flet ((symbolicate (&rest things)
            (intern
              (coerce
@@ -208,10 +208,10 @@
                        :from-end t)
                'string)
              :cl-tensor.blas.cublas)))
-    (let ((sf (symbolicate 's (subseq (string blas-function) 1)))
-          (df (symbolicate 'd (subseq (string blas-function) 1)))
+    (let ((sf (symbolicate 's (subseq (string cublas-function) 1)))
+          (df (symbolicate 'd (subseq (string cublas-function) 1)))
           (g!args (gensym "ARGS")))
-      `(flet ((,blas-function (&rest ,g!args)
+      `(flet ((,cublas-function (&rest ,g!args)
                 (ecase (element-type)
                   (:float  (apply (function ,sf) ,g!args))
                   (:double (apply (function ,df) ,g!args)))))
@@ -220,7 +220,7 @@
 ;; BLAS Level-1
 (defmethod scal (alpha (x cuarray))
   (check-type alpha number)
-  (with-blas-function ?scal
+  (with-cublas-function ?scal
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-object (=>alpha (element-type))
         (setf (cffi:mem-ref =>alpha (element-type))
@@ -262,7 +262,7 @@
 (defmethod axpy (alpha (x cuarray) (y cuarray))
   (check-type alpha number)
   (assert-total-size-match x y)
-  (with-blas-function ?axpy
+  (with-cublas-function ?axpy
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-object (=>alpha (element-type))
         (setf (cffi:mem-ref =>alpha (element-type))
@@ -278,7 +278,7 @@
 
 (defmethod dot ((x cuarray) (y cuarray))
   (assert-dimensions-match x y)
-  (with-blas-function ?dot
+  (with-cublas-function ?dot
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-object (=>result (element-type))
         (?dot *blas-state*
@@ -289,7 +289,7 @@
         (cffi:mem-ref =>result (element-type))))))
 
 (defmethod nrm2 ((x cuarray))
-  (with-blas-function ?nrm2
+  (with-cublas-function ?nrm2
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-object (=>result (element-type))
         (?nrm2 *blas-state*
@@ -300,7 +300,7 @@
         (cffi:mem-ref =>result (element-type))))))
 
 (defmethod asum ((x cuarray))
-  (with-blas-function ?asum
+  (with-cublas-function ?asum
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-object (=>result (element-type))
         (?asum *blas-state*
@@ -311,7 +311,7 @@
         (cffi:mem-ref =>result (element-type))))))
 
 (defmethod amax ((x cuarray))
-  (with-blas-function ?amax
+  (with-cublas-function ?amax
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-object (=>result (element-type))
         (?amax *blas-state*
@@ -325,7 +325,7 @@
 (defmethod gemv (alpha (a cuarray) (x cuarray) beta (y cuarray) &key trans?)
   (check-type alpha number) (check-type beta number)
   (assert-rank a 2) (assert-rank x 1) (assert-rank y 1)
-  (with-blas-function ?gemv
+  (with-cublas-function ?gemv
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-objects ((=>alpha (element-type))
                                   (=>beta (element-type)))
@@ -348,35 +348,28 @@
                (cuarray-datum y) 1)
         y))))
 
-(defmethod gbmv (alpha (a cuarray) (x cuarray) beta (y cuarray) &key trans? (kl 0) (ku 0))
-  (check-type alpha number) (check-type beta number)
-  (assert-rank a 2) (assert-rank x 1) (assert-rank y 1)
-  (with-blas-function ?gbmv
+(defmethod ger (alpha (x cuarray) (y cuarray) (a cuarray))
+  (check-type alpha number)
+  (assert-rank x 1) (assert-rank y 1) (assert-rank a 2)
+  (assert-dimension-match x 0 a 0)
+  (assert-dimension-match y 0 a 1)
+  (with-cublas-function ?ger
     (with-blas (cublas *blas-state*)
-      (cffi:with-foreign-objects ((=>alpha (element-type))
-                                  (=>beta (element-type)))
+      (cffi:with-foreign-object (=>alpha (element-type))
         (setf (cffi:mem-ref =>alpha (element-type))
               (coerce alpha (ecase (element-type)
                               (:float  'single-float)
                               (:double 'double-float))))
-        (setf (cffi:mem-ref =>beta (element-type))
-              (coerce beta (ecase (element-type)
-                              (:float  'single-float)
-                              (:double 'double-float))))
-        (?gbmv *blas-state*
-               (if trans? :cublas-op-n :cublas-op-t)
-               (blas-array-dimension a 1)
-               (blas-array-dimension a 0)
-               kl
-               ku
-               =>alpha
-               (cuarray-datum a) (blas-array-dimension a 1)
-               (cuarray-datum x) 1
-               =>beta
-               (cuarray-datum y) 1)
-        y))))
+        (?ger *blas-state*
+              (blas-array-dimension a 1)
+              (blas-array-dimension a 0)
+              =>alpha
+              (cuarray-datum y) 1
+              (cuarray-datum x) 1
+              (cuarray-datum a) (blas-array-dimension a 1))
+        a))))
 
-
+;;; BLAS Level-3
 (defmethod gemm (alpha (a cuarray) (b cuarray) beta (c cuarray) &key trans-a? trans-b?)
   (check-type alpha number) (check-type beta number)
   (assert-rank a 2) (assert-rank b 2) (assert-rank c 2)
@@ -395,10 +388,7 @@
         ((and trans-a? trans-b?)             (assert-dimension-match c 0 a 1)
                                              (assert-dimension-match c 1 b 0)
                                              (assert-dimension-match a 0 b 1)))
-  (flet ((%gemm (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:sgemm args))
-             (:double (apply #'clt.cublas:dgemm args)))))
+  (with-cublas-function ?gemm
     (with-blas (cublas *blas-state*)
       (cffi:with-foreign-objects ((=>alpha (element-type))
                                   (=>beta (element-type)))
@@ -410,7 +400,7 @@
               (coerce beta (ecase (element-type)
                              (:float  'single-float)
                              (:double 'double-float))))
-        (%gemm *blas-state*
+        (?gemm *blas-state*
                (if trans-a? :cublas-op-t :cublas-op-n)
                (if trans-b? :cublas-op-t :cublas-op-n)
                (blas-array-dimension c 1)
@@ -423,364 +413,3 @@
                (cuarray-datum c) (blas-array-dimension c 1))
         c))))
 
-
-#|
-  ;;; Core
-  (defparameter *handle* nil)
-(defparameter (element-type) :float)
-
-(defmacro with-handle ((&optional handle) &body body)
-  (if handle
-      `(let ((*handle* ,handle)) (progn ,@body))
-      `(clt.cublas:with-handle *handle* ,@body)))
-
-
-;;; Constructors
-
-
-(defun make-zeros-cuarray (dimensions)
-  (check-type dimensions list)
-  (mapc (lambda (dim) (check-type dim (integer 0 *))) dimensions)
-  (let* ((cuarr (make-cuarray dimensions))
-         (total-size (cuarray-total-size cuarr)))
-    (cffi:with-foreign-object (=>x (element-type) total-size)
-      (dotimes (i total-size)
-        (setf (cffi:mem-aref =>x (element-type) i)
-              (ecase (element-type)
-                (:float 0.0f1)
-                (:double 0.0d1))))
-      (clt.cublas:cuda-memcpy (cuarray-datum cuarr)
-                              =>x
-                              (* (cffi:foreign-type-size (element-type)) total-size)
-                              :cuda-memcpy-default)
-      cuarr)))
-
-
-
-(defun identity-cuarray (rank)
-  (make-custom-cuarray (list rank rank)
-                       :key (lambda (n) (if (multiple-value-call #'= (floor n rank))
-                                            1.0
-                                            0.0))))
-
-
-;;; Accessors
-(defun cuarray-rank (cuarray)
-  (check-type cuarray cuarray)
-  (length (cuarray-dimensions cuarray)))
-
-(defun cuarray-dimension (cuarray axis-number)
-  (check-type cuarray cuarray)
-  (check-type axis-number (integer 0 *))
-  (nth axis-number (cuarray-dimensions cuarray)))
-
-(defun cuarray-total-size (cuarray)
-  (check-type cuarray cuarray)
-  (reduce #'* (cuarray-dimensions cuarray) :initial-value 1))
-
-
-;;; Convertors
-
-
-
-;;; BLAS functions
-(defun amax (x)
-  (check-type x cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (flet ((%amax (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:isamax args))
-             (:double (apply #'clt.cublas:idamax args)))))
-    (cffi:with-foreign-object (=>result (element-type))
-      (%amax *handle* (cuarray-rank x) (cuarray-datum x) 1 =>result)
-      (cffi:mem-ref =>result (element-type)))))
-
-(defun amin (x)
-  (check-type x cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (flet ((%amin (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:isamin args))
-             (:double (apply #'clt.cublas:idamin args)))))
-    (cffi:with-foreign-object (=>result (element-type))
-      (%amin *handle* (cuarray-rank x) (cuarray-datum x) 1 =>result)
-      (cffi:mem-ref =>result (element-type)))))
-
-(defun asum (x)
-  (check-type x cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (flet ((%asum (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:sasum args))
-             (:double (apply #'clt.cublas:dasum args)))))
-    (cffi:with-foreign-object (=>result (element-type))
-      (%asum *handle* (cuarray-dimension x 0) (cuarray-datum x) 1 =>result)
-      (cffi:mem-ref =>result (element-type)))))
-
-(defun axpy (alpha x y)
-  (check-type x cuarray)
-  (check-type y cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (assert (= (cuarray-rank y) 1) (y)
-          'cuarray-rank-error :datum y :expected-rank 1)
-  (assert (= (cuarray-dimension x 0) (cuarray-dimension y 0)) (x y)
-          'cuarray-dimension-unmatched-error :datam1 x :axis1 0 :datam2 y :axis2)
-  (flet ((%axpy (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:saxpy args))
-             (:double (apply #'clt.cublas:daxpy args)))))
-    (cffi:with-foreign-object (=>alpha (element-type))
-      (setf (cffi:mem-ref =>alpha (element-type))
-        (coerce alpha (ecase (element-type)
-                        (:float  'single-float)
-                        (:double 'double-float))))
-      (%axpy *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1 (cuarray-datum y) 1)
-      y)))
-
-(defun copy (x y)
-  (check-type x cuarray)
-  (check-type y cuarray)
-  (assert (<= (cuarray-total-size x) (cuarray-total-size y)) (x y)
-          'simple-cuarray-error
-          :format-control "The total size of ~%~2T~S~%is greater than~%~2T~S~%."
-          :format-args x y)
-  (flet ((%copy (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:scopy args))
-             (:double (apply #'clt.cublas:dcopy args)))))
-    (%copy *handle* (cuarray-total-size x) (cuarray-datum x) 1 (cuarray-datum y) 1)))
-
-
-(defun dot (x y)
- (check-type x cuarray)
- (check-type y cuarray)
- (assert (= (cuarray-rank x) 1) (x)
-         'cuarray-rank-error :datum x :expected-rank 1)
- (assert (= (cuarray-rank y) 1) (y)
-         'cuarray-rank-error :datum y :expected-rank 1)
- (assert (= (cuarray-dimension x 0) (cuarray-dimension y 0)) (x y)
-         'cuarray-dimension-unmatched-error :datum1 x :axis1 0 :datum2 y :axis2 0)
- (flet ((%dot (&rest args)
-          (ecase (element-type)
-            (:float  (apply #'clt.cublas:sdot args))
-            (:double (apply #'clt.cublas:ddot args)))))
-   (cffi:with-foreign-object (=>result (element-type))
-     (%dot *handle* (cuarray-dimension x 0) (cuarray-datum x) 1 (cuarray-datum y) 1 =>result)
-     (cffi:mem-ref =>result (element-type)))))
-
-(defun nrm2 (x)
-  (check-type x cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (flet ((%nrm2 (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:snrm2 args))
-             (:double (apply #'clt.cublas:dnrm2 args)))))
-    (cffi:with-foreign-object (=>result (element-type))
-      (%nrm2 *handle* (cuarray-dimension x 0) (cuarray-datum x) 1 =>result)
-      (cffi:mem-ref =>result (element-type)))))
-
-(defun scal (alpha x)
-  (check-type alpha real)
-  (check-type x cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (flet ((%scal (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:sscal args))
-             (:double (apply #'clt.cublas:dscal args)))))
-    (cffi:with-foreign-object (=>alpha (element-type))
-      (setf (cffi:mem-ref =>alpha (element-type)) (coerce alpha (ecase (element-type)
-                                                              (:float  'single-float)
-                                                              (:double 'double-float))))
-      (%scal *handle* (cuarray-dimension x 0) =>alpha (cuarray-datum x) 1)
-      x)))
-
-(defun gemv (alpha a x beta y &key trans-a?)
-  (declare (optimize (debug 3)))
-  (check-type alpha real)
-  (check-type a cuarray)
-  (check-type x cuarray)
-  (check-type y cuarray)
-  (assert (= (cuarray-rank a) 2) (a)
-          'cuarray-rank-error :datum a :expected-rank 2)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (assert (= (cuarray-rank y) 1) (y)
-          'cuarray-rank-error :datum y :expected-rank 1)
-  (if trans-a?
-      (progn
-        (assert (= (cuarray-dimension a 0) (cuarray-dimension x 0)) (a x)
-                'cuarray-dimension-unmatched-error :datum1 a :axis1 0 :datum2 x :axis2 0)
-        (assert (= (cuarray-dimension a 1) (cuarray-dimension y 0)) (x y)
-                'cuarray-dimension-unmatched-error :datum1 x :axis1 1 :datum2 y :axis2 0))
-      (progn
-        (assert (= (cuarray-dimension a 1) (cuarray-dimension x 0)) (a x)
-                'cuarray-dimension-unmatched-error :datum1 a :axis1 1 :datum2 x :axis2 0)
-        (assert (= (cuarray-dimension a 0) (cuarray-dimension y 0)) (x y)
-                'cuarray-dimension-unmatched-error :datum1 x :axis1 0 :datum2 y :axis2 0)))
-  (flet ((%gemv (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:sgemv args))
-             (:double (apply #'clt.cublas:dgemv args)))))
-    (let ((m (cuarray-dimension a 0))
-          (n (cuarray-dimension a 1))
-          (trans (if trans-a? :cublas-op-t :cublas-op-n)))
-      (cffi:with-foreign-objects ((=>alpha (element-type))
-                                  (=>beta (element-type)))
-        (setf (cffi:mem-ref =>alpha (element-type))
-              (coerce alpha (ecase (element-type)
-                              (:float  'single-float)
-                              (:double 'double-float))))
-        (setf (cffi:mem-ref =>beta (element-type))
-              (coerce beta (ecase (element-type)
-                             (:float  'single-float)
-                             (:double 'double-float))))
-        (%gemv *handle* trans m n =>alpha (cuarray-datum a) m (cuarray-datum x) 1 =>beta (cuarray-datum y) 1)
-        y))))
-
-(defun ger (alpha x y a)
-  (check-type alpha real)
-  (check-type x cuarray)
-  (check-type y cuarray)
-  (check-type a cuarray)
-  (assert (= (cuarray-rank x) 1) (x)
-          'cuarray-rank-error :datum x :expected-rank 1)
-  (assert (= (cuarray-rank y) 1) (y)
-          'cuarray-rank-error :datum y :expected-rank 1)
-  (assert (= (cuarray-rank a) 2) (a)
-          'cuarray-rank-error :datum a :expected-rank 2)
-  (assert (= (cuarray-dimension x 0) (cuarray-dimension a 0)) (x a)
-          'cuarray-dimension-unmatched-error :datum1 x :axis1 0 :datum2 a :axis2 0)
-  (assert (= (cuarray-dimension y 0) (cuarray-dimension a 1)) (y a)
-          'cuarray-dimension-unmatched-error :datum1 y :axis1 0 :datum2 a :axis2 1)
-  (flet ((%ger (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:sger args))
-             (:double (apply #'clt.cublas:dger args)))))
-    (let ((m (cuarray-dimension a 0))
-          (n (cuarray-dimension a 1)))
-      (cffi:with-foreign-object (=>alpha (element-type))
-        (setf (cffi:mem-ref =>alpha (element-type))
-              (coerce alpha (ecase (element-type)
-                              (:float  'single-float)
-                              (:double 'double-float))))
-        (%ger *handle* m n =>alpha (cuarray-datum x) 1 (cuarray-datum y) 1 (cuarray-datum a) m)
-        a))))
-
-#|
-(let ((x (make-custom-cuarray '(5)))
-      (y (make-custom-cuarray '(5) :init 1 :step #'identity))
-      (a (make-cuarray '(5 5))))
-  (with-handle ()
-    (print x)
-    (print y)
-    (ger 1.0 x y a)))
-|#
-
-(defun gemm (alpha a b beta c &key trans-a? trans-b?)
-  (check-type alpha real)
-  (check-type a cuarray)
-  (check-type b cuarray)
-  (check-type beta real)
-  (check-type c cuarray)
-  (assert (= (cuarray-rank a) 2) (a)
-          'cuarray-rank-error :datum a :expected-rank 2)
-  (assert (= (cuarray-rank b) 2) (b)
-          'cuarray-rank-error :datum b :expected-rank 2)
-  (assert (= (cuarray-rank c) 2) (c)
-          'cuarray-rank-error :datum c :expected-rank 2)
-  (cond
-    ((and (not trans-a?) (not trans-b?))
-     (assert (= (cuarray-dimension a 1) (cuarray-dimension b 0)) (a b)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 1 :datum2 b :axis2 0)
-     (assert (= (cuarray-dimension a 0) (cuarray-dimension c 0)) (a c)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 0 :datum2 c :axis2 0)
-     (assert (= (cuarray-dimension b 1) (cuarray-dimension c 1)) (b c)
-             'cuarray-dimension-unmatched-error :datum1 b :axis1 1 :datum2 c :axis2 1))
-    ((and trans-a? (not trans-b?))
-     (assert (= (cuarray-dimension a 0) (cuarray-dimension b 0)) (a b)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 0 :datum2 b :axis2 0)
-     (assert (= (cuarray-dimension a 1) (cuarray-dimension c 0)) (a c)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 1 :datum2 c :axis2 0)
-     (assert (= (cuarray-dimension b 1) (cuarray-dimension c 1)) (b c)
-             'cuarray-dimension-unmatched-error :datum1 b :axis1 1 :datum2 c :axis2 1))
-    ((and (not trans-a?) trans-b?)
-     (assert (= (cuarray-dimension a 1) (cuarray-dimension b 1)) (a b)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 1 :datum2 b :axis2 1)
-     (assert (= (cuarray-dimension a 0) (cuarray-dimension c 0)) (a c)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 0 :datum2 c :axis2 0)
-     (assert (= (cuarray-dimension b 0) (cuarray-dimension c 1)) (b c)
-             'cuarray-dimension-unmatched-error :datum1 b :axis1 0 :datum2 c :axis2 1))
-    (t
-     (assert (= (cuarray-dimension a 0) (cuarray-dimension b 1)) (a b)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 0 :datum2 b :axis2 1)
-     (assert (= (cuarray-dimension a 1) (cuarray-dimension c 0)) (a c)
-             'cuarray-dimension-unmatched-error :datum1 a :axis1 1 :datum2 c :axis2 0)
-     (assert (= (cuarray-dimension b 0) (cuarray-dimension c 1)) (b c)
-             'cuarray-dimension-unmatched-error :datum1 b :axis1 0 :datum2 c :axis2 1)))
-  (flet ((%gemm (&rest args)
-           (ecase (element-type)
-             (:float  (apply #'clt.cublas:sgemm args))
-             (:double (apply #'clt.cublas:dgemm args)))))
-    (cffi:with-foreign-objects ((=>alpha (element-type))
-                                 (=>beta  (element-type)))
-      (setf (cffi:mem-ref =>alpha (element-type))
-        (coerce alpha
-                (ecase (element-type)
-                  (:float 'single-float)
-                  (:double 'double-float))))
-      (setf (cffi:mem-ref =>beta  (element-type))
-        (coerce beta
-                (ecase (element-type)
-                  (:float 'single-float)
-                  (:double 'double-float))))
-      (%gemm
-        *handle*
-        (if trans-a? :cublas-op-t :cublas-op-n)
-        (if trans-b? :cublas-op-t :cublas-op-n)
-        (cuarray-dimension c 0)
-        (cuarray-dimension c 1)
-        (if trans-a? (cuarray-dimension a 0) (cuarray-dimension a 1))
-        =>alpha
-        (cuarray-datum a) (cuarray-dimension a 0)
-        (cuarray-datum b) (cuarray-dimension b 0)
-        =>beta
-        (cuarray-datum c) (cuarray-dimension c 0))
-      c)))
-
-
-
-(define-condition cuarray-cuarray-error (simple-error) ())
-
-(define-condition cuarray-rank-error (error)
-  ((expected-rank :initarg :expected-rank
-                  :reader cuarray-rank-error-expected-rank)
-   (datum :initarg :datum
-          :reader cuarray-rank-error-datum))
-  (:report (lambda (o s)
-             (format s "The rank of the value~%~2T~S~%is not ~%~2T~S"
-                     (cuarray-rank-error-datum o)
-                     (cuarray-rank-error-expected-rank o)))))
-
-(define-condition cuarray-dimension-unmatched-error (error)
-  ((datum1 :initarg :datum1
-           :reader cuarray-dimension-unmatched-error-datum1)
-   (axis1 :initarg :axis1
-          :reader cuarray-dimension-unmatched-error-axis1)
-   (datum2 :initarg :datum2
-           :reader cuarray-dimension-unmatched-error-datum2)
-   (axis2 :initarg :axis2
-          :reader cuarray-dimension-unmatched-error-axis2))
-  (:report (lambda (o s)
-             (format s
-                     "The dimensions of the axis~%~2T~D~%of the CUARRAY~%~2T~S~%and axis~%~2T~D~%of the CUARRAY~%~2T~S~%are different."
-                     (cuarray-dimension-unmatched-error-axis1 o)
-                     (cuarray-dimension-unmatched-error-datum1 o)
-                     (cuarray-dimension-unmatched-error-axis2 o)
-                     (cuarray-dimension-unmatched-error-datum2 o)))))
-|#
