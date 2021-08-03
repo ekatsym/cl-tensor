@@ -1,5 +1,5 @@
-(defpackage :cl-tensor.blas.cublas
-  (:nicknames :clt.cublas :clt.cb)
+(defpackage cl-tensor.blas.cublas
+  (:nicknames :clt.cublas :clt.cub)
   (:use :common-lisp :cffi)
   (:export
     ;; grovel types and constants

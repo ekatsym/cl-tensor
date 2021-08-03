@@ -133,7 +133,7 @@
 
 (defmacro defcublasfun_v2 ((cname lisp-name) &body args)
   (let ((cname_v2 (concatenate 'string cname "_v2"))
-        (%lisp-name (intern (concatenate 'string "%"(string lisp-name)))))
+        (%lisp-name (intern (concatenate 'string "%" (string lisp-name)))))
     `(progn
        (defun ,lisp-name (,@(mapcar #'first args))
          (check-status (,%lisp-name ,@(mapcar #'first args))))
