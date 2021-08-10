@@ -22,6 +22,11 @@
   (=>y :pointer)
   (incy blasint))
 
+(defcfun* ("cblas_?asum" ?asum :real-only? t) ?type
+  (n blasint)
+  (=>x :pointer)
+  (incx blasint))
+
 (defcfun* ("cblas_?axpy" ?axpy) :void
   (n blasint)
   (alpha ?type)
@@ -44,6 +49,47 @@
   (=>y :pointer)
   (incy blasint))
 
+(defcfun* ("cblas_?nrm2" ?nrm2 :real-only? t) ?type
+  (n blasint)
+  (=>x :pointer)
+  (incx blasint))
+
+(defcfun* ("cblas_?scal" ?scal) :void
+  (n blasint)
+  (alpha ?type)
+  (=>x ?type)
+  (incx blasint))
+
+
+;;; Define openBLAS level-2 functions
+(defcfun* ("cblas_?gemv" ?gemv) :void
+  (order cblas-order)
+  (trans cblas-transpose)
+  (m blasint)
+  (n blasint)
+  (alpha ?type)
+  (=>a :pointer)
+  (lda blasint)
+  (=>x :pointer)
+  (incx blasint)
+  (beta ?type)
+  (=>y :pointer)
+  (incy blasint))
+
+(defcfun* ("cblas_?ger" ?ger :real-only? t) :void
+  (order cblas-order)
+  (m blasint)
+  (n blasint)
+  (alpha ?type)
+  (=>x ?type)
+  (incx blasint)
+  (=>y ?type)
+  (incy blasint)
+  (=>a ?type)
+  (lda blasint))
+
+
+;;; Define openBLAS level-3 functions
 (defcfun* ("cblas_?gemm" ?gemm) :void
   (order cblas-order)
   (transa cblas-transpose)

@@ -26,7 +26,7 @@
 
     ;; BLAS Level-1
     #:scal #:copy #:axpy #:dot
-    #:nrm2 #:asum #:amax
+    #:nrm2 #:asum #:amax #:amin
 
     ;; BLAS Level-2
     #:gemv #:ger

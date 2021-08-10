@@ -16,7 +16,7 @@
 
 (cenum cblas-transpose
   ((:cblas-no-trans       "CblasNoTrans"))
-  ((:cblas-trans      "CblasTrans"))
+  ((:cblas-trans          "CblasTrans"))
   ((:cblas-conj-trans     "CblasConjTrans"))
   ((:cblas-conj-no-trans  "CblasConjNoTrans")))
 
