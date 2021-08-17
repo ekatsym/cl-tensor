@@ -1,5 +1,5 @@
 (defpackage cl-tensor.blas.cuarray
-  (:nicknames :clt.cuarray clt.b.ca)
+  (:nicknames :clt.cuarray :clt.b.cu)
   (:use :common-lisp :cl-tensor.blas :cl-tensor.util :cl-tensor.blas.assert)
   (:import-from cl-tensor.blas.cublas #:create-handle #:destroy)
   (:export
@@ -53,11 +53,11 @@
 (defun array->cuarray (array)
   (check-type array array)
   (let* ((dims (array-dimensions array))
-         (cuarr (make-cuarray (array-dimensions array)))
+         (cuarr (make-cuarray dims))
          (datum (cuarray-datum cuarr))
-         (count (reduce #'* dims)))
+         (count (array-total-size array)))
     (cffi:with-foreign-object (carr (element-type) count)
-      (dotimes (i (reduce #'* dims))
+      (dotimes (i count)
         (setf (cffi:mem-aref carr (element-type) i)
               (coerce (row-major-aref array i)
                       (ecase (element-type)
@@ -80,7 +80,7 @@
                               datum
                               (* (cffi:foreign-type-size (element-type)) count)
                               :cuda-memcpy-default)
-      (dotimes (i (reduce #'* dims))
+      (dotimes (i count)
         (setf (row-major-aref arr i)
               (cffi:mem-aref carr (element-type) i)))
       arr)))

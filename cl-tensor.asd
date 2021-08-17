@@ -28,8 +28,8 @@
                    (:file "assert"  :depends-on ("main"))
                    (:file "array"   :depends-on (           "main" "assert"))
                    (:file "cuarray" :depends-on ("cublas"   "main" "assert"))
-                   (:file "oparray" :depends-on ("openblas" "main" "assert"))
-                   (:file "convert" :depends-on ("main" "array" "cuarray" "oparray"))))
+                   (:file "carray"  :depends-on ("openblas" "main" "assert"))
+                   (:file "convert" :depends-on ("main" "array" "cuarray" "carray"))))
                  (:file "util"))))
   :description ""
   :in-order-to ((test-op (test-op "cl-tensor/tests"))))
