@@ -2,13 +2,18 @@
   (:nicknames :clt.util :clt.ut)
   (:use :common-lisp)
   (:export
+    #:index
     #:mappend
     #:zip
+    #:partial
     #:indices
     #:index->row-major-index
     #:index->col-major-index))
 (in-package :cl-tensor.util)
 
+
+(deftype index ()
+  `(integer 0 ,array-dimension-limit))
 
 (defun mappend (function list &rest more-lists)
   (reduce (lambda (xs acc) (append (apply function xs) acc))
@@ -18,6 +23,9 @@
 
 (defun zip (&rest lists)
   (apply #'mapcar #'list lists))
+
+(defun partial (fn &rest args)
+  (lambda (&rest rest-args) (apply fn (append args rest-args))))
 
 (defun indices (dimensions)
   (reduce (lambda (dim acc)

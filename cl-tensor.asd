@@ -7,29 +7,34 @@
   :components ((:module "src"
                 :components
                 ((:file "package")
-                 (:module "blas"
-                  :depends-on ("util")
+                 (:file "core"   :depends-on ("util"))
+                 (:module "blas" :depends-on ("util" "core")
                   :components
                   ((:file "main")
-                   (:module "cublas"
+                   (:file "util"      :depends-on ("main"))
+                   (:module "array"   :depends-on ("main" "util")
                     :serial t
                     :components
-                    ((:file "package")
-                     (:cffi-grovel-file "grovel")
-                     (:file "util")
-                     (:file "library")))
-                   (:module "openblas"
+                    ((:file             "package")
+                     (:file             "util")
+                     (:file             "main")))
+                   (:module "carray"  :depends-on ("main" "util")
                     :serial t
                     :components
-                    ((:file "package")
+                    ((:file             "package")
                      (:cffi-grovel-file "grovel")
-                     (:file "util")
-                     (:file "library")))
-                   (:file "assert"  :depends-on ("main"))
-                   (:file "array"   :depends-on (           "main" "assert"))
-                   (:file "cuarray" :depends-on ("cublas"   "main" "assert"))
-                   (:file "carray"  :depends-on ("openblas" "main" "assert"))
-                   (:file "convert" :depends-on ("main" "array" "cuarray" "carray"))))
+                     (:file             "util")
+                     (:file             "library")
+                     (:file             "main")))
+                   (:module "cuarray" :depends-on ("main" "util")
+                    :serial t
+                    :components
+                    ((:file             "package")
+                     (:cffi-grovel-file "grovel")
+                     (:file             "util")
+                     (:file             "library")
+                     (:file             "main")))))
+                 ;(:file "tensor" :depends-on ("util" "blas"))
                  (:file "util"))))
   :description ""
   :in-order-to ((test-op (test-op "cl-tensor/tests"))))
@@ -41,6 +46,10 @@
                "rove")
   :components ((:module "tests"
                 :components
-                ((:file "main"))))
+                ((:file "blas"))))
   :description "Test system for cl-tensor"
-  :perform (test-op (op c) (symbol-call :rove :run c)))
+  :perform (test-op (op c) (unless (symbol-call :rove :run c)
+                             #+sbcl (sb-ext:exit :code 1)
+                             #+ccl  (ccl:quit 1)
+                             #+abcl (extensions:exit :status 1)
+                             #+ecl  (si:quit 1))))

@@ -3,9 +3,7 @@
   (:nicknames :clt.tensor)
   (:export
     ;; core
-    #:tensor
-
-    #:transpose
-    #:diag
-    ))
+    #:tensor))
 (in-package :cl-tensor.tensor)
+
+

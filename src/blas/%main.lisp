@@ -2,22 +2,26 @@
   (:nicknames :clt.blas)
   (:use :common-lisp)
   (:export
-    ;; Arrays
-    #:array #:carray #:cuarray
+    ;; Core
+    #:array #:open-blas #:cublas
 
-    ;; Constructors
+    ;; State
+    #:*blas-state* #:start-blas #:finish-blas #:with-blas
+
+    ;; Element Type
+    #:element-type #:*element-type* #:s #:d #:c #:z
+
+    ;; Constructor
     #:make-blas-array #:make-blas-array*
+    #:make-identity-matrix
 
-    ;; Convertors
-    #:coerce-blas-array
-
-    ;; Accessors
+    ;; Accessor
     #:blas-array-dimensions
     #:blas-array-dimension
     #:blas-array-rank
     #:blas-array-total-size
 
-    ;; Utilities
+    ;; Utility
     #:trans #:diag #:reshape
 
     ;; BLAS Level-1
@@ -32,37 +36,42 @@
 (in-package :cl-tensor.blas)
 
 
-;;; Arrays
-(defclass carray ()
-  ((dimensions :initarg :dimensions :reader carray-dimensions)
-   (datum      :initarg :datum      :reader carray-datum)))
+;;; State
+(defparameter *blas-state* nil)
 
-(defmethod print-object ((object carray) stream)
-  (format stream "<CARRAY :DIMENSIONS ~A :DATUM ~A>"
-          (carray-dimensions object)
-          (coerce-blas-array 'array object)))
+(defgeneric start-blas (blas-name))
 
-(defclass cuarray ()
-  ((dimensions :initarg :dimensions :reader cuarray-dimensions)
-   (datum      :initarg :datum      :reader cuarray-datum)))
+(defgeneric finish-blas (blas-name state))
 
-(defmethod print-object ((object cuarray) stream)
-  (format stream "<CUARRAY :DIMENSIONS ~A :DATUM ~A>"
-          (cuarray-dimensions object)
-          (coerce-blas-array 'array object)) )
+(defmacro with-blas ((blas-name &optional state) &body body)
+  `(if ,state
+       (let ((*blas-state* ,state))
+         ,@body)
+       (let ((*blas-state* (start-blas ',blas-name)))
+         (unwind-protect (multiple-value-prog1 (progn ,@body))
+           (finish-blas ',blas-name *blas-state*)))))
 
-;;; Constructors
-(defgeneric make-blas-array (array-type-spec dimensions &key element-type
-                                                             initial-element
-                                                             displaced-to))
+;;; Element Type
+(deftype element-type ()
+  '(member s d c z))
 
-(defgeneric make-blas-array* (array-type-spec dimensions &key element-type
-                                                              seed next key))
+(defparameter *element-type* 's)
 
-;;; Convertors
-(defgeneric coerce-blas-array (array-type-spec blas-array))
 
-;;; Accessors
+;;; Constructor
+(defgeneric make-blas-array (blas-name dimensions))
+
+(defgeneric make-blas-array* (blas-name dimensions &key init step key))
+
+(defun make-identity-matrix (blas-name rank)
+  (make-blas-array* blas-name
+                    (list rank rank)
+                    :key (lambda (n) (if (multiple-value-call #'= (floor n rank))
+                                         1.0
+                                         0.0))))
+
+
+;;; Accessor
 (defgeneric blas-array-dimensions (blas-array))
 
 (defun blas-array-dimension (blas-array axis-number)
@@ -72,9 +81,14 @@
   (length (blas-array-dimensions blas-array)))
 
 (defun blas-array-total-size (blas-array)
-  (reduce #'* (blas-array-dimensions blas-array)))
+  (reduce #'* (blas-array-dimensions blas-array) :initial-value 1))
 
-;;; Utilities
+
+;;; Converter
+(defgeneric coerce-blas-array (blas-array output-blas-name))
+
+
+;;; Utility
 (defgeneric trans (a)
   (:documentation
 "Return the transposition of A.
@@ -89,6 +103,9 @@ X: vector."))
   (:documentation
 "Return DIMENSIONS blas-array that has elements of A.
 A: blas-array."))
+
+
+;;; BLAS
 
 ;; BLAS Level-1
 (defgeneric scal (alpha x)
@@ -130,10 +147,6 @@ X: vector."))
 (defgeneric amax (x)
   (:documentation
     "Return argmax_{x_i \in X} |x_i|."))
-
-(defgeneric amin (x)
-  (:documentation
-    "Return argmix_{x_i \in X} |x_i|."))
 
 ;; BLAS Level-2
 (defgeneric gemv (alpha a x beta y &key trans?)
