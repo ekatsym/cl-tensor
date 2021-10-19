@@ -8,7 +8,8 @@
     #:partial
     #:indices
     #:index->row-major-index
-    #:index->col-major-index))
+    #:index->col-major-index
+    #:flet2))
 (in-package :cl-tensor.util)
 
 
@@ -49,3 +50,12 @@
           (zip index dimensions)
           :initial-value 0
           :from-end t))
+
+(defmacro flet2 ((&rest bindings) &body body)
+  (let ((g!args (gensym "ARGS")))
+    `(let ,bindings
+       (flet ,(mapcar (lambda (binding)
+                        (let ((fun (first binding)))
+                          `(,fun (&rest ,g!args) (apply ,fun ,g!args))))
+                      bindings)
+         ,@body))))
