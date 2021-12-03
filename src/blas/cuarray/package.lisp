@@ -1,3 +1,39 @@
+(defpackage cl-tensor.blas.cuarray
+  (:nicknames :clt.blas.cu  :clt.b.cu)
+  (:use
+    :common-lisp
+    :cffi
+    :cl-tensor.core
+    :cl-tensor.blas)
+  (:export
+    ;; Arrays
+    #:array #:carray #:cuarray
+
+    ;; Constructors
+    #:make-blas-array #:make-blas-array*
+
+    ;; Conventors
+    #:coerce-blas-array
+
+    ;; Accessors
+    #:blas-array-dimensions
+    #:blas-array-dimension
+    #:blas-array-rank
+    #:blas-array-total-size
+
+    ;; Utilities
+    #:trans #:diag #:reshape
+
+    ;; BLAS Level-1
+    #:scal #:copy #:axpy #:dot
+
+    ;; BLAS Level-2
+    #:gemv #:ger
+
+    ;; BLAS Level-3
+    #:gemm))
+
+
 (defpackage cl-tensor.blas.cublas
   (:nicknames :clt.cublas :clt.cub)
   (:use :common-lisp :cffi)
